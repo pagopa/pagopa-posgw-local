@@ -1,0 +1,75 @@
+services:
+
+  mongo:
+    container_name: pagopa-posgw-mongo
+    image: mongo@sha256:d343c378b5c6e2fe373174abcf4a877be0dfc721b5d0b9d582204dccb1c00b86
+    env_file: mongodb/mongodb.env
+    ports:
+      - "${MONGO_PORT}:27017"
+    networks:
+      - pagopa-posgw-net
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin --username admin --password password --quiet | grep 1
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    entrypoint:
+      - bash
+      - -c
+      - |
+        openssl rand -base64 756 > /data/replica.key 
+        chmod 400 /data/replica.key
+        chown 999:999 /data/replica.key
+        exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --port 27017 --keyFile /data/replica.key
+
+  mongo-init:
+    container_name: posgw-mongo-init
+    image: alpine/mongosh@sha256:2d7a9cb13f433ae72c13019db935e74831359a022f0a89282e5294cf578db3bc
+    # connects to the mongo service and runs the script.
+    # it run once and then exit
+    command: mongosh --host pagopa-posgw-mongo --port 27017 --username admin --password password --file /scripts/mongo-init.js
+    volumes:
+      - ./mongodb/mongo-init.js:/scripts/mongo-init.js:ro
+    networks:
+      - pagopa-posgw-net
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongo-express:
+    container_name: pagopa-posgw-mongo-express
+    image: mongo-express@sha256:1b23d7976f0210dbec74045c209e52fbb26d29b2e873d6c6fa3d3f0ae32c2a64
+    env_file: mongodb/mongo-express.env
+    ports:
+      - "${MONGO_EXPRESS_PORT}:8081"
+    networks:
+      - pagopa-posgw-net
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+
+  redis:
+    container_name: pagopa-posgw-redis
+    image: redis@sha256:009cc37796fbdbe1b631b4cc0582bed167e5e403ed8bcd06f77eb6cb5aeb6f93
+    env_file: redis/redis.env
+    command: ["sh", "-c", 'exec redis-server --requirepass "$$REDIS_PASSWORD"']
+    ports:
+      - "${REDIS_PORT}:6379"
+    networks:
+      - pagopa-posgw-net
+
+  redis-insight:
+    container_name: pagopa-posgw-redis-insight
+    image: redislabs/redisinsight@sha256:55542a762210bb1cd681410282642bac0970f780f39bc134565394a81b1f1fd9
+    ports:
+      - "${REDIS_INSIGHT_PORT}:5540"
+    networks:
+      - pagopa-posgw-net
+
+networks:
+  pagopa-posgw-net:
+    name: pagopa-posgw-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
