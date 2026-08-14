@@ -27,7 +27,7 @@ services:
     container_name: posgw-mongo-init
     image: alpine/mongosh@sha256:2d7a9cb13f433ae72c13019db935e74831359a022f0a89282e5294cf578db3bc
     # connects to the mongo service and runs the script.
-    # it run once and then exit
+    # it runs once and then exit
     command: mongosh --host pagopa-posgw-mongo --port 27017 --username admin --password password --file /scripts/mongo-init.js
     volumes:
       - ./mongodb/mongo-init.js:/scripts/mongo-init.js:ro
@@ -67,9 +67,144 @@ services:
     networks:
       - pagopa-posgw-net
 
+  traefik:
+    container_name: pagopa-posgw-traefik
+    image: traefik:v2.7@sha256:41bfa070b43184314a1fd86d5b68d367d3f744e972ca3fe44a8875f69935c2d7
+    ports:
+      - "8000:80"
+      - "8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # - $PWD/traefik_conf:/etc/traefik
+      - $PWD/traefik_logs:/traefik_logs
+    networks:
+      - pagopa-posgw-net
+
+  # SigNoz - Complete observability stack (SigNoz + ClickHouse + Zookeeper)
+  # Init container to prepare ClickHouse
+  signoz-init-clickhouse:
+    container_name: pagopa-posgw-signoz-init-clickhouse
+    image: clickhouse/clickhouse-server:25.5.6@sha256:4536143e22dc9bddb217c7e610f6b7ed5e6efd8fefdbc61acdeadb5d8022213a
+    tty: true
+    networks:
+      - pagopa-posgw-net
+    volumes:
+      - ./signoz-data/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
+    entrypoint: ["/bin/bash", "-c"]
+    command: # auto-downloaded, this is used to calculate metrics like percentiles, latency etc.
+      - |
+        ARCH=$$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+        wget -nv -O /var/lib/clickhouse/user_scripts/histogram-quantile "https://github.com/SigNoz/signoz/releases/download/v0.104.0/histogram-quantile-linux-$${ARCH}"
+        chmod +x /var/lib/clickhouse/user_scripts/histogram-quantile
+
+  # Zookeeper for ClickHouse coordination
+  signoz-zookeeper:
+    container_name: pagopa-posgw-signoz-zookeeper
+    image: signoz/zookeeper:3.7.1@sha256:fcc4a3288154ccaa3bdb5ae6dc10180c084d29a8a6a26b62ac8e30a8940dc2e6
+    networks:
+      - pagopa-posgw-net
+    volumes:
+      - signoz-zookeeper-data:/bitnami/zookeeper
+    environment:
+      - ZOO_SERVER_ID=1
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_AUTOPURGE_INTERVAL=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/commands/ruok"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ClickHouse - Data storage backend
+  signoz-clickhouse:
+    container_name: pagopa-posgw-signoz-clickhouse
+    image: clickhouse/clickhouse-server:25.5.6@sha256:4536143e22dc9bddb217c7e610f6b7ed5e6efd8fefdbc61acdeadb5d8022213a
+    tty: true
+    depends_on:
+      signoz-init-clickhouse:
+        condition: service_completed_successfully
+      signoz-zookeeper:
+        condition: service_healthy
+    networks:
+      - pagopa-posgw-net
+    ports:
+      - "9001:9000"
+      - "8123:8123"
+    volumes:
+      - signoz-clickhouse-data:/var/lib/clickhouse/
+      - ./signoz-data/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
+      - ./signoz-data/clickhouse-config/config.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+    environment:
+      - CLICKHOUSE_SKIP_USER_SETUP=1
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # schema migrator - creates ClickHouse databases
+  signoz-schema-migrator:
+    container_name: pagopa-posgw-signoz-schema-migrator
+    image: signoz/signoz-schema-migrator:v0.129.12@sha256:43044b0666c60ad9c0e8c1240d478f846d0c2b7fccfea142fa043f327c8be279
+    command: ["sync", "--dsn=tcp://signoz-clickhouse:9000", "--dev"]
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+    networks:
+      - pagopa-posgw-net
+
+  # SigNoz UI and query service
+  signoz:
+    container_name: pagopa-posgw-signoz
+    image: signoz/signoz:v0.104.0@sha256:11bc581c5cb8cb003d5d822b611c427c57ce53eba8b44c00ceedc963bc4c0b26
+    depends_on:
+      signoz-schema-migrator:
+        condition: service_completed_successfully
+    networks:
+      - pagopa-posgw-net
+    ports:
+      - "${SIGNOZ_PORT}:8080"
+    environment:
+      - ClickHouseUrl=tcp://signoz-clickhouse:9000
+      - STORAGE=clickhouse
+      - GODEBUG=netdns=go
+      - TELEMETRY_ENABLED=false
+      - SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
+    volumes:
+      - signoz-data:/var/lib/signoz
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # OpenTelemetry Collector - receives telemetry data
+  signoz-otel-collector:
+    container_name: pagopa-posgw-signoz-otel-collector
+    image: signoz/signoz-otel-collector:v0.129.12@sha256:84df7d9786ce12ee5983fc8460225371a204bca6320c85717801bf110b84ed65
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    depends_on:
+      signoz:
+        condition: service_healthy
+    networks:
+      - pagopa-posgw-net
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+    volumes:
+      - ./signoz-data/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
+      - CLICKHOUSE_DSN=tcp://signoz-clickhouse:9000
+
 networks:
   pagopa-posgw-net:
     name: pagopa-posgw-net
     driver: bridge
     driver_opts:
       com.docker.network.driver.mtu: 1450
+
+volumes:
+  signoz-data:
+  signoz-zookeeper-data:
+  signoz-clickhouse-data:
