@@ -75,7 +75,7 @@ services:
       - "8090:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      # - $PWD/traefik_conf:/etc/traefik
+      - $PWD/traefik_conf:/etc/traefik
       - $PWD/traefik_logs:/traefik_logs
     networks:
       - pagopa-posgw-net
@@ -196,6 +196,7 @@ services:
     environment:
       - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
       - CLICKHOUSE_DSN=tcp://signoz-clickhouse:9000
+      - LOW_CARDINAL_EXCEPTION_GROUPING=false
 
   pagopa-posgw-transactions-handler:
     container_name: pagopa-posgw-transactions-handler

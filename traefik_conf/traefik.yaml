@@ -6,9 +6,9 @@ entryPoints:
   web:
     address: ":80"
 
-#providers:
-#  file:
-#    filename: "/etc/traefik/conf.yaml"
+providers:
+  file:
+    filename: "/etc/traefik/conf.yaml"
 
 api:
   insecure: true
