@@ -18,7 +18,7 @@ In the _.env_ file there are configurations related to containers that can be cu
 | SIGNOZ_PORT                                  | The port the SigNoz observability UI listens to.                                                |
 | POSGW_<service_name>_GIT_REF*                | The git ref to be fetched when building <service_name> image                                    |
 | POSGW_<service_name>_PORT*                   | The http port where <service_name> service will be listening to                                 | 
-| POSGW_<service_name>_USE_NATIVE_COMPILATION* | Boolean value indicating if use or not native compilation while building <service_name> service |
+| POSGW_<service_name>_COMPILATION_MODE*       | The native or jvm mode to be use while building service <service_name> service                  |
 
 \* the POSGW_<service_name>_ prefix means that those properties will be present one for each pos gateway pagoPA service
 

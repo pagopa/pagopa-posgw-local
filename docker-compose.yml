@@ -204,8 +204,7 @@ services:
       context: .
       args:
         POSGW_TRANSACTIONS_HANDLER_GIT_REF: ${POSGW_TRANSACTIONS_HANDLER_GIT_REF}
-        POSGW_TRANSACTIONS_HANDLER_USE_NATIVE_COMPILATION: ${POSGW_TRANSACTIONS_HANDLER_USE_NATIVE_COMPILATION}
-      dockerfile: pagopa-posgw-transactions-handler/Dockerfile.transactions-handler
+      dockerfile: pagopa-posgw-transactions-handler/Dockerfile.transactions-handler.${POSGW_TRANSACTIONS_HANDLER_COMPILATION_MODE}
     ports:
         - "${POSGW_TRANSACTIONS_HANDLER_PORT}:8080"
     networks:

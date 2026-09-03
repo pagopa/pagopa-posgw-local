@@ -1,6 +1,3 @@
-# Selects the build/run path: "true" -> GraalVM native image, "false" -> JVM jar
-ARG POSGW_TRANSACTIONS_HANDLER_USE_NATIVE_COMPILATION=false
-
 ### 1. Cloning stage
 FROM alpine/git@sha256:d453f54c83320412aa89c391b076930bd8569bc1012285e8c68ce2d4435826a3 AS clone
 WORKDIR /workspace/pagopa-posgw-transactions-handler
@@ -11,7 +8,7 @@ RUN rm -rf * && \
     git clone https://github.com/pagopa/pagopa-posgw-transactions-handler.git /workspace/pagopa-posgw-transactions-handler && \
     git checkout ${POSGW_TRANSACTIONS_HANDLER_GIT_REF} 
 
-### 2a. JVM build stage
+### 2. JVM build stage
 # version 25-alpine
 FROM amazoncorretto@sha256:2ad5f5cf03a3970f2478b130dc28f51b179ce13c58154fe3ec1a6fdeb3b86e3a AS build-jvm
 WORKDIR /workspace/pagopa-posgw-transactions-handler/
@@ -29,21 +26,7 @@ RUN rm build/libs/*-plain.jar
 RUN cp build/libs/*.jar application.jar
 RUN mkdir build/extracted && java -Djarmode=tools -jar application.jar extract --layers --destination build/extracted
 
-### 2b. Native build stage (GraalVM native-image)
-# version 25
-FROM ghcr.io/graalvm/native-image-community@sha256:3c53c5900ce3c39b1293a0d0f3417d04d4b4f07752fd083c322bf9f37ed8de0a AS build-native
-
-WORKDIR /workspace/pagopa-posgw-transactions-handler/
-
-ARG REPO=/workspace/pagopa-posgw-transactions-handler
-
-COPY --from=clone ${REPO}/ .
-
-#build the native executable
-RUN chmod +x ./gradlew
-RUN ./gradlew nativeCompile -x test
-
-### 3a. JVM run stage
+### 3. JVM run stage
 # version 25-alpine
 FROM amazoncorretto@sha256:2ad5f5cf03a3970f2478b130dc28f51b179ce13c58154fe3ec1a6fdeb3b86e3a AS run-jvm
 
@@ -69,27 +52,3 @@ RUN true
 ENV OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
 
 ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "application.jar"]
-
-### 3b. Native run stage
-# version :stable-20240701-slim
-FROM debian@sha256:f8bbfa052db81e5b8ac12e4a1d8310a85d1509d4d0d5579148059c0e8b717d4e AS run-native
-
-RUN addgroup --system user && adduser --ingroup user --system user
-USER user:user
-
-WORKDIR /app/
-
-EXPOSE 8080
-
-COPY --from=build-native /workspace/pagopa-posgw-transactions-handler/build/native/nativeCompile/pagopa-posgw-transactions-handler .
-
-ENV OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
-
-ENTRYPOINT ["./pagopa-posgw-transactions-handler"]
-
-### 4. Final stage selection based on POSGW_TRANSACTIONS_HANDLER_USE_NATIVE_COMPILATION
-# Aliases resolve to "run-false" (JVM) or "run-true" (native); BuildKit only
-# builds the branch actually referenced by the selected stage.
-FROM run-jvm AS run-false
-FROM run-native AS run-true
-FROM run-${POSGW_TRANSACTIONS_HANDLER_USE_NATIVE_COMPILATION} AS run
