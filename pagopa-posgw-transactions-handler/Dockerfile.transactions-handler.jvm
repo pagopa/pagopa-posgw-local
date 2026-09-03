@@ -35,19 +35,10 @@ USER user:user
 
 ARG EXTRACTED=/workspace/pagopa-posgw-transactions-handler/build/extracted
 
-COPY --from=build-jvm --chown=user ${EXTRACTED} .
-
-ARG JAR_FILE=pagopa*.jar
-ENV APP_NAME=$JAR_FILE
-
 COPY --from=build-jvm --chown=user ${EXTRACTED}/dependencies/ ./
-RUN true
 COPY --from=build-jvm --chown=user ${EXTRACTED}/spring-boot-loader/ ./
-RUN true
 COPY --from=build-jvm --chown=user ${EXTRACTED}/snapshot-dependencies/ ./
-RUN true
 COPY --from=build-jvm --chown=user ${EXTRACTED}/application/ ./
-RUN true
 
 ENV OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
 
