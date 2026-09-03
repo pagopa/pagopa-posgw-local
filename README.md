@@ -16,11 +16,11 @@ In the _.env_ file there are configurations related to containers that can be cu
 | REDIS_PORT                                   | The port the redis listens to.                                                                  |
 | REDIS_INSIGHT_PORT                           | The port the redis-insight listens to.                                                          |
 | SIGNOZ_PORT                                  | The port the SigNoz observability UI listens to.                                                |
-| POSGW_<service_name>_GIT_REF*                | The git ref to be fetched when building <service_name> image                                    |
-| POSGW_<service_name>_PORT*                   | The http port where <service_name> service will be listening to                                 | 
-| POSGW_<service_name>_COMPILATION_MODE*       | The native or jvm mode to be use while building service <service_name> service                  |
+| `POSGW_<service_name>_GIT_REF`*                | The git ref to be fetched when building the `<service_name>` image                               |
+| `POSGW_<service_name>_PORT`*                   | The HTTP port where the `<service_name>` service will listen                                     |
+| `POSGW_<service_name>_COMPILATION_MODE`*       | Build mode for `<service_name>` (`native` or `jvm`)                                               |
 
-\* the POSGW_<service_name>_ prefix means that those properties will be present one for each pos gateway pagoPA service
+\* The `POSGW_<service_name>_` prefix means these properties are present once per pagoPA POS gateway service
 
 ### Run Pos Gateway pagoPA
 
