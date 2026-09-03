@@ -9,13 +9,18 @@ In the _.env_ file there are configurations related to containers that can be cu
 
 #### Infrastructure Services
 
-| name                                     | description                                                                                                                                      |
-|------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| MONGO_PORT                               | The port the mongodb listens to.                                                                                                                 |
-| MONGO_EXPRESS_PORT                       | The port the mongo-express listens to.                                                                                                           |
-| REDIS_PORT                               | The port the redis listens to.                                                                                                                   |
-| REDIS_INSIGHT_PORT                       | The port the redis-insight listens to.                                                                                                           |
-| SIGNOZ_PORT                              | The port the SigNoz observability UI listens to.                                                                                                 |
+| name                                         | description                                                                                     |
+|----------------------------------------------|-------------------------------------------------------------------------------------------------|
+| MONGO_PORT                                   | The port the mongodb listens to.                                                                |
+| MONGO_EXPRESS_PORT                           | The port the mongo-express listens to.                                                          |
+| REDIS_PORT                                   | The port the redis listens to.                                                                  |
+| REDIS_INSIGHT_PORT                           | The port the redis-insight listens to.                                                          |
+| SIGNOZ_PORT                                  | The port the SigNoz observability UI listens to.                                                |
+| POSGW_<service_name>_GIT_REF*                | The git ref to be fetched when building <service_name> image                                    |
+| POSGW_<service_name>_PORT*                   | The http port where <service_name> service will be listening to                                 | 
+| POSGW_<service_name>_USE_NATIVE_COMPILATION* | Boolean value indicating if use or not native compilation while building <service_name> service |
+
+\* the POSGW_<service_name>_ prefix means that those properties will be present one for each pos gateway pagoPA service
 
 ### Run Pos Gateway pagoPA
 
