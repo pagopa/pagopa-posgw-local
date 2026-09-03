@@ -42,4 +42,4 @@ COPY --from=build-jvm --chown=user ${EXTRACTED}/application/ ./
 
 ENV OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
 
-ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "org.springframework.boot.loader.launch.JarLauncher"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "application.jar"]
