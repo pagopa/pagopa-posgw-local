@@ -51,4 +51,4 @@ RUN true
 
 ENV OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
 
-ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "application.jar"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "org.springframework.boot.loader.launch.JarLauncher"]
