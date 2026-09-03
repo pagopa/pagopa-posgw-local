@@ -5,8 +5,8 @@ WORKDIR /workspace/pagopa-posgw-transactions-handler
 ARG POSGW_TRANSACTIONS_HANDLER_GIT_REF
 
 RUN rm -rf * && \
-    git clone https://github.com/pagopa/pagopa-posgw-transactions-handler.git /workspace/pagopa-posgw-transactions-handler && \
-    git checkout ${POSGW_TRANSACTIONS_HANDLER_GIT_REF} 
+    git clone https://github.com/pagopa/pagopa-posgw-transactions-handler.git . && \
+    git checkout "${POSGW_TRANSACTIONS_HANDLER_GIT_REF}"
 
 ### 2. JVM build stage
 # version 25-alpine
