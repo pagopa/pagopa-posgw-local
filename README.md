@@ -124,7 +124,7 @@ To fix:
 
 run docker compose with:
 ```sh
-DOCKER_BUILDKIT=1DOCKER
+DOCKER_BUILDKIT=1 docker compose up
 ```
 #### SigNoz Startup Time
 

@@ -1,0 +1,19 @@
+http:
+  routers:
+    transactions-handler-router:
+      service: "pagopa-posgw-transactions-handler"
+      rule: "PathPrefix(`/transactions-handler`)"
+      middlewares:
+        - transactions-handler-prefix
+
+  middlewares:
+    transactions-handler-prefix:
+      stripPrefix:
+        prefixes:
+          - "/transactions-handler"
+
+  services:
+    pagopa-posgw-transactions-handler:
+      loadBalancer:
+        servers:
+          - url: "http://pagopa-posgw-transactions-handler:8080"
