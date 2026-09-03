@@ -197,6 +197,24 @@ services:
       - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
       - CLICKHOUSE_DSN=tcp://signoz-clickhouse:9000
 
+  pagopa-posgw-transactions-handler:
+    container_name: pagopa-posgw-transactions-handler
+    env_file: pagopa-posgw-transactions-handler/transactions-handler.env
+    build:
+      context: .
+      args:
+        POSGW_TRANSACTIONS_HANDLER_GIT_REF: ${POSGW_TRANSACTIONS_HANDLER_GIT_REF}
+      dockerfile: pagopa-posgw-transactions-handler/Dockerfile.transactions-handler
+    ports:
+        - "${POSGW_TRANSACTIONS_HANDLER_PORT}:8080"
+    networks:
+      - pagopa-posgw-net
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+      signoz-otel-collector:
+        condition: service_started
+
 networks:
   pagopa-posgw-net:
     name: pagopa-posgw-net

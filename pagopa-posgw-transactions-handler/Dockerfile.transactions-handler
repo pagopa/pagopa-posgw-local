@@ -1,0 +1,55 @@
+### 1. Cloning stage
+FROM alpine/git@sha256:d453f54c83320412aa89c391b076930bd8569bc1012285e8c68ce2d4435826a3 AS clone
+WORKDIR /workspace/pagopa-posgw-transactions-handler
+
+ARG POSGW_TRANSACTIONS_HANDLER_GIT_REF
+
+RUN rm -rf * && \
+    git clone https://github.com/pagopa/pagopa-posgw-transactions-handler.git /workspace/pagopa-posgw-transactions-handler && \
+    git checkout ${POSGW_TRANSACTIONS_HANDLER_GIT_REF} 
+
+### 2. Build stage
+# version 25-alpine
+FROM amazoncorretto@sha256:2ad5f5cf03a3970f2478b130dc28f51b179ce13c58154fe3ec1a6fdeb3b86e3a AS build
+WORKDIR /workspace/pagopa-posgw-transactions-handler/
+
+ARG REPO=/workspace/pagopa-posgw-transactions-handler
+
+COPY --from=clone ${REPO}/ .
+
+#build project
+RUN chmod +x ./gradlew
+RUN ./gradlew build -x test
+
+#remove plain jar, required by native compilations only
+RUN rm build/libs/*-plain.jar
+RUN cp build/libs/*.jar application.jar
+RUN mkdir build/extracted && java -Djarmode=tools -jar application.jar extract --layers --destination build/extracted
+
+### 3. Run stage
+# version 25-alpine
+FROM amazoncorretto@sha256:2ad5f5cf03a3970f2478b130dc28f51b179ce13c58154fe3ec1a6fdeb3b86e3a AS run
+
+RUN addgroup --system user && adduser --ingroup user --system user
+USER user:user
+
+ARG EXTRACTED=/workspace/pagopa-posgw-transactions-handler/build/extracted
+
+COPY --from=build --chown=user ${EXTRACTED} .
+
+ARG JAR_FILE=pagopa*.jar
+ENV APP_NAME=$JAR_FILE
+ADD --chown=user https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.26.0/opentelemetry-javaagent.jar .
+
+COPY --from=build --chown=user ${EXTRACTED}/dependencies/ ./
+RUN true
+COPY --from=build --chown=user ${EXTRACTED}/spring-boot-loader/ ./
+RUN true
+COPY --from=build --chown=user ${EXTRACTED}/snapshot-dependencies/ ./
+RUN true
+COPY --from=build --chown=user ${EXTRACTED}/application/ ./
+RUN true
+
+ENV OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
+
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-javaagent:opentelemetry-javaagent.jar", "-jar", "application.jar"]
