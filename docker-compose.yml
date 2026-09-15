@@ -216,6 +216,24 @@ services:
       signoz-otel-collector:
         condition: service_started
 
+  pagopa-posgw-debtposition-handler:
+    container_name: pagopa-posgw-debtposition-handler
+    env_file: pagopa-posgw-debtposition-handler/debtposition-handler.env
+    build:
+      context: .
+      args:
+        POSGW_DEBTPOSITION_HANDLER_GIT_REF: ${POSGW_DEBTPOSITION_HANDLER_GIT_REF}
+      dockerfile: pagopa-posgw-debtposition-handler/Dockerfile.debtposition-handler.${POSGW_DEBTPOSITION_HANDLER_COMPILATION_MODE:-native}
+    ports:
+      - "${POSGW_DEBTPOSITION_HANDLER_PORT}:8080"
+    networks:
+      - pagopa-posgw-net
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+      signoz-otel-collector:
+        condition: service_started
+
 networks:
   pagopa-posgw-net:
     name: pagopa-posgw-net
