@@ -55,24 +55,6 @@ You can check data persisted to either Mongo, Redis or SigNoz for example with t
 | `ClickHouse`                | http://localhost:8123 (HTTP), 9001 (native)                      |
 | `OTEL Collector`            | http://localhost:4318 (HTTP), 4317 (gRPC)                        |
 
-### Azure Service Bus Emulator
-
-The local stack now includes the official Azure Service Bus emulator, its SQL Server dependency, and the Service Bus Explorer web client. The emulator loads entity definitions from `azure-service-bus-emulator/config.json`, mirroring the queue/topic/subscription names introduced in pagopa/pagopa-infra#4047:
-
-- Queues: `posgw.cmd.ecommerce.sync`, `posgw.cmd.ecommerce.sync.retry`, `posgw.cmd.gec.sync`, `posgw.cmd.gec.sync.retry`, `posgw.cmd.session.poll`, `posgw.cmd.session.expire`
-- Topics: `posgw.evt.session.lifecycle`, `posgw.evt.sys.telemetry`
-- Subscriptions: `posgw.sub.session.view_update`, `posgw.sub.session.compensation`, `posgw.sub.telemetry.elastic_ingest.lifecycle`, `posgw.sub.telemetry.elastic_ingest.telemetry`
-- SQL filter: `status IN ('EXPIRED', 'FAILED')` on `posgw.sub.session.compensation`
-
-Use the local development connection string below from applications running on your host machine:
-
-```text
-Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
-```
-
-The explorer container connects to the emulator over the Docker network and uses `AZURE_SERVICE_BUS_EXPLORER_UI_PORT` and `AZURE_SERVICE_BUS_EXPLORER_SECONDARY_PORT` for its host port mappings. The emulator management endpoint is exposed through `AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT`.
-
-On Apple Silicon hosts, Docker runs the Service Bus Explorer container via `linux/amd64` emulation because the published image does not currently include an ARM64 manifest.
 
 
 
@@ -135,6 +117,26 @@ You can also use **Mongo Express** at http://localhost:${MONGO_EXPRESS_PORT} for
 
 #### Redis
 Use **Redis Insight** at http://localhost:${REDIS_INSIGHT_PORT} to inspect Redis data.
+
+
+### Message broker
+
+Microsoft official Azure service bus emulator is used as emulator for the Azure Service bus queues and topics message broker provider.
+
+The emulator loads entity definitions from `azure-service-bus-emulator/config.json` that contains the queues and topic definitions.
+Those resources will be automatically created at emulator startup
+
+Use the local development connection string below from applications running on your host machine:
+
+```text
+Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+```
+
+#### Check events on queues and topics
+
+The explorer container connects to the emulator over the Docker network and uses `AZURE_SERVICE_BUS_EXPLORER_UI_PORT` and `AZURE_SERVICE_BUS_EXPLORER_SECONDARY_PORT` for its host port mappings. The emulator management endpoint is exposed through `AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT`.
+
+Use **Service Bus Explorer UI** at http://localhost:${AZURE_SERVICE_BUS_EXPLORER_UI_PORT} to inspect Storage explorer datas, written queue/topic events, DLQ etc.
 
 ### Building Services
 
