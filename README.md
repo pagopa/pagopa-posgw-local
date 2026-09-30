@@ -72,6 +72,8 @@ Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAcce
 
 The explorer container connects to the emulator over the Docker network and uses `AZURE_SERVICE_BUS_EXPLORER_UI_PORT` and `AZURE_SERVICE_BUS_EXPLORER_SECONDARY_PORT` for its host port mappings. The emulator management endpoint is exposed through `AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT`.
 
+On Apple Silicon hosts, Docker runs the Service Bus Explorer container via `linux/amd64` emulation because the published image does not currently include an ARM64 manifest.
+
 
 
 ### Observability with SigNoz

@@ -67,26 +67,26 @@ services:
     networks:
       - pagopa-posgw-net
 
-  azure-service-bus-mssql:
-    container_name: pagopa-posgw-azure-service-bus-mssql
-    image: mcr.microsoft.com/mssql/server@sha256:4402d880dd4c34bfa7d8705e56a86cd6c88da80a1f6bbbe741f999e76264a090
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "PosgwLocalSql_123!"
+  azure-service-bus-sqledge:
+    container_name: pagopa-posgw-azure-service-bus-sqledge
+    image: "mcr.microsoft.com/azure-sql-edge:latest"
     networks:
       - pagopa-posgw-net
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
 
   azure-service-bus-emulator:
     container_name: pagopa-posgw-azure-service-bus-emulator
     image: mcr.microsoft.com/azure-messaging/servicebus-emulator@sha256:5a96d893b245031740f7d46e0fe5ff282d24b78c4b7d761dd57590f3f010a9b3
     depends_on:
-      - azure-service-bus-mssql
+      - azure-service-bus-sqledge
     ports:
       - "5672:5672"
       - "${AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT}:5300"
     environment:
-      SQL_SERVER: azure-service-bus-mssql
-      MSSQL_SA_PASSWORD: "PosgwLocalSql_123!"
+      SQL_SERVER: azure-service-bus-sqledge
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
       ACCEPT_EULA: "Y"
       EMULATOR_HTTP_PORT: 5300
       SQL_WAIT_INTERVAL: 15
@@ -97,7 +97,8 @@ services:
 
   azure-service-bus-explorer:
     container_name: pagopa-posgw-azure-service-bus-explorer
-    image: ghcr.io/tombiddulph/service-bus-emulator-explorer@sha256:4e415e6418aa1412b61039e411d360b97a872d88045b7073fd293e5d75ab5992
+    image: ghcr.io/tombiddulph/service-bus-emulator-explorer:latest
+    platform: linux/amd64
     depends_on:
       - azure-service-bus-emulator
     ports:
@@ -107,7 +108,7 @@ services:
       ServiceBus__ConnectionString: "Endpoint=sb://azure-service-bus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
       ServiceBus__AdministrationConnectionString: "Endpoint=sb://azure-service-bus-emulator:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
       ServiceBus__RefreshIntervalMs: 5000
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: local
     networks:
       - pagopa-posgw-net
 
