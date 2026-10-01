@@ -234,6 +234,19 @@ services:
       signoz-otel-collector:
         condition: service_started
 
+  ec-mock:
+    container_name: ec-mock
+    build:
+      context: .
+      dockerfile: ec-mock/Dockerfile.ec-mock
+    ports:
+      - "${EC_MOCK_PORT:-3000}:3000"
+    volumes:
+      - ./ec-mock/ec-mock.json:/config/ec-server.json
+      - ./ec-mock/middleware.js:/config/middleware.js:ro
+    networks:
+      - pagopa-posgw-net
+
 networks:
   pagopa-posgw-net:
     name: pagopa-posgw-net
