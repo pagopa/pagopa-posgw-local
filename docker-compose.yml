@@ -67,6 +67,51 @@ services:
     networks:
       - pagopa-posgw-net
 
+  azure-service-bus-sqledge:
+    container_name: pagopa-posgw-azure-service-bus-sqledge
+    image: "mcr.microsoft.com/azure-sql-edge:latest"
+    networks:
+      - pagopa-posgw-net
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
+
+  azure-service-bus-emulator:
+    container_name: pagopa-posgw-azure-service-bus-emulator
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator@sha256:5a96d893b245031740f7d46e0fe5ff282d24b78c4b7d761dd57590f3f010a9b3
+    depends_on:
+      - azure-service-bus-sqledge
+    ports:
+      - "5672:5672"
+      - "${AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT}:5300"
+    environment:
+      SQL_SERVER: azure-service-bus-sqledge
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
+      ACCEPT_EULA: "Y"
+      EMULATOR_HTTP_PORT: 5300
+      SQL_WAIT_INTERVAL: 15
+    volumes:
+      - ./azure-service-bus-emulator/config.json:/ServiceBus_Emulator/ConfigFiles/Config.json:ro
+    networks:
+      - pagopa-posgw-net
+
+  azure-service-bus-explorer:
+    container_name: pagopa-posgw-azure-service-bus-explorer
+    image: ghcr.io/tombiddulph/service-bus-emulator-explorer:latest
+    platform: linux/amd64
+    depends_on:
+      - azure-service-bus-emulator
+    ports:
+      - "${AZURE_SERVICE_BUS_EXPLORER_UI_PORT}:8080"
+      - "${AZURE_SERVICE_BUS_EXPLORER_SECONDARY_PORT}:8081"
+    environment:
+      ServiceBus__ConnectionString: "Endpoint=sb://azure-service-bus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+      ServiceBus__AdministrationConnectionString: "Endpoint=sb://azure-service-bus-emulator:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+      ServiceBus__RefreshIntervalMs: 5000
+      ASPNETCORE_ENVIRONMENT: local
+    networks:
+      - pagopa-posgw-net
+
   traefik:
     container_name: pagopa-posgw-traefik
     image: traefik:v2.7@sha256:41bfa070b43184314a1fd86d5b68d367d3f744e972ca3fe44a8875f69935c2d7

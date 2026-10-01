@@ -15,6 +15,9 @@ In the _.env_ file there are configurations related to containers that can be cu
 | MONGO_EXPRESS_PORT                     | The port the mongo-express listens to.                             |
 | REDIS_PORT                             | The port the redis listens to.                                     |
 | REDIS_INSIGHT_PORT                     | The port the redis-insight listens to.                             |
+| AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT   | Host port for the Service Bus emulator management/health endpoint. |
+| AZURE_SERVICE_BUS_EXPLORER_UI_PORT     | Host port for the Service Bus Explorer web UI.                     |
+| AZURE_SERVICE_BUS_EXPLORER_SECONDARY_PORT | Host port for the explorer secondary HTTP endpoint.             |
 | SIGNOZ_PORT                            | The port the SigNoz observability UI listens to.                   |
 | POSGW_<service_name>_GIT_REF*          | The git ref to be fetched when building the `<service_name>` image |
 | POSGW_<service_name>_PORT*             | The HTTP port where the `<service_name>` service will listen       |
@@ -37,15 +40,22 @@ Watch out: there are many services that will be build and run parallel, consider
 
 You can check data persisted to either Mongo, Redis or SigNoz for example with their respective web interfaces (Mongo express/Redis Insight/SigNoz UI). To do so, go to:
 
-| service             | url                                         |
-|---------------------|---------------------------------------------|
-| `Traefik Dashboard` | http://localhost:8090                       |
-| `Traefik Proxy`     | http://localhost:8000                       |
-| `Redis Insight`     | http://localhost:8001                       |
-| `Mongo Express`     | http://localhost:8081                       |
-| `SigNoz UI`         | http://localhost:3301                       |
-| `ClickHouse`        | http://localhost:8123 (HTTP), 9001 (native) |
-| `OTEL Collector`    | http://localhost:4318 (HTTP), 4317 (gRPC)   |
+| service                     | url                                                              |
+|-----------------------------|------------------------------------------------------------------|
+| `Traefik Dashboard`         | http://localhost:8090                                            |
+| `Traefik Proxy`             | http://localhost:8000                                            |
+| `Redis Insight`             | http://localhost:${REDIS_INSIGHT_PORT}                           |
+| `Mongo Express`             | http://localhost:${MONGO_EXPRESS_PORT}                           |
+| `Service Bus Health`        | http://localhost:${AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT}/health  |
+| `Service Bus AMQP`          | sb://localhost:5672                                              |
+| `Service Bus Explorer UI`   | http://localhost:${AZURE_SERVICE_BUS_EXPLORER_UI_PORT}           |
+| `Service Bus Explorer API`  | http://localhost:${AZURE_SERVICE_BUS_EXPLORER_UI_PORT}/api       |
+| `Service Bus Explorer Docs` | http://localhost:${AZURE_SERVICE_BUS_EXPLORER_UI_PORT}/scalar/v1 |
+| `SigNoz UI`                 | http://localhost:${SIGNOZ_PORT}                                  |
+| `ClickHouse`                | http://localhost:8123 (HTTP), 9001 (native)                      |
+| `OTEL Collector`            | http://localhost:4318 (HTTP), 4317 (gRPC)                        |
+
+
 
 
 ### Observability with SigNoz
@@ -54,7 +64,7 @@ This setup includes [SigNoz](https://signoz.io/), a complete observability platf
 
 #### Accessing SigNoz
 
-Navigate to **http://localhost:3301** to access the SigNoz UI where you can:
+Navigate to **http://localhost:${SIGNOZ_PORT}** to access the SigNoz UI where you can:
 - View distributed traces across all microservices
 - Monitor service metrics (latency, throughput, error rates)
 - Query and analyze application logs
@@ -103,10 +113,30 @@ If you want to connect to MongoDB using an external client (such as Mongo Compas
 ```
 to map the pagopa-posgw-mongo hostname with localhost. This is required since mongo is started as a replica set with that hostname.
 
-You can also use **Mongo Express** at http://localhost:8081 for a web-based interface.
+You can also use **Mongo Express** at http://localhost:${MONGO_EXPRESS_PORT} for a web-based interface.
 
 #### Redis
-Use **Redis Insight** at http://localhost:8001 to inspect Redis data.
+Use **Redis Insight** at http://localhost:${REDIS_INSIGHT_PORT} to inspect Redis data.
+
+
+### Message broker
+
+Microsoft official Azure service bus emulator is used as emulator for the Azure Service bus queues and topics message broker provider.
+
+The emulator loads entity definitions from `azure-service-bus-emulator/config.json` that contains the queues and topic definitions.
+Those resources will be automatically created at emulator startup
+
+Use the local development connection string below from applications running on your host machine:
+
+```text
+Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+```
+
+#### Check events on queues and topics
+
+The explorer container connects to the emulator over the Docker network and uses `AZURE_SERVICE_BUS_EXPLORER_UI_PORT` and `AZURE_SERVICE_BUS_EXPLORER_SECONDARY_PORT` for its host port mappings. The emulator management endpoint is exposed through `AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT`.
+
+Use **Service Bus Explorer UI** at http://localhost:${AZURE_SERVICE_BUS_EXPLORER_UI_PORT} to inspect Storage explorer datas, written queue/topic events, DLQ etc.
 
 ### Building Services
 
@@ -151,4 +181,3 @@ Alternatively, to disable the entire SigNoz stack, comment out these services in
 - `signoz-zookeeper`
 - `signoz-init-clickhouse`
 - `signoz-schema-migrator`
-

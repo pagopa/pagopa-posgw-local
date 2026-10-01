@@ -1,0 +1,113 @@
+{
+  "UserConfig": {
+    "Namespaces": [
+      {
+        "Name": "service-bus-emulator",
+        "Queues": [
+          {
+            "Name": "posgw.cmd.ecommerce.sync",
+            "Properties": {
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": true,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "posgw.cmd.ecommerce.sync.retry",
+            "Properties": {
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": true,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "posgw.cmd.gec.sync",
+            "Properties": {
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": true,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "posgw.cmd.gec.sync.retry",
+            "Properties": {
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": true,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "posgw.cmd.session.poll",
+            "Properties": {
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": true,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "posgw.cmd.session.expire",
+            "Properties": {
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": true,
+              "RequiresSession": false
+            }
+          }
+        ],
+        "Topics": [
+          {
+            "Name": "posgw.evt.session.lifecycle",
+            "Subscriptions": [
+              {
+                "Name": "posgw.sub.session.view_update",
+                "Properties": {
+                  "MaxDeliveryCount": 10,
+                  "RequiresSession": false
+                }
+              },
+              {
+                "Name": "posgw.sub.session.compensation",
+                "Properties": {
+                  "MaxDeliveryCount": 10,
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "status-compensation",
+                    "Properties": {
+                      "FilterType": "Sql",
+                      "SqlFilter": {
+                        "SqlExpression": "status IN ('EXPIRED', 'FAILED')"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "posgw.sub.telemetry.elastic_ingest.lifecycle",
+                "Properties": {
+                  "MaxDeliveryCount": 10,
+                  "RequiresSession": false
+                }
+              }
+            ]
+          },
+          {
+            "Name": "posgw.evt.sys.telemetry",
+            "Subscriptions": [
+              {
+                "Name": "posgw.sub.telemetry.elastic_ingest.telemetry",
+                "Properties": {
+                  "MaxDeliveryCount": 10,
+                  "RequiresSession": false
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "Logging": {
+      "Type": "File"
+    }
+  }
+}
