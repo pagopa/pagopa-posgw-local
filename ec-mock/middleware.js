@@ -122,7 +122,7 @@ module.exports = (req, res, next) => {
       break;
 
     default:
-      logRequest(req, sessionId, 400, 'Invalid Mock Response');
+      logRequest(req, sessionId, 400, `Unhandled X-Mock-Response: ${response}`);
       return res.status(400).json({
         code: 'INVALID_MOCK_RESPONSE',
         message: 'Bad request',
