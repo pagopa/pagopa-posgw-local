@@ -4,6 +4,9 @@ const colors = {
   reset: '\x1b[0m',
 };
 
+// Constants for simulating a timeout delay
+const timeoutDelay = 30000; // 30 seconds
+
 // Function for well formatted logging with color coding for accepted and rejected requests
 function logRequest(req, sessionId, status, reason) {
   const accepted = status >= 200 && status < 300;
@@ -103,6 +106,20 @@ module.exports = (req, res, next) => {
         code: 'GATEWAY_TIMEOUT',
         message: 'Gateway timeout',
       });
+
+    case 'timeout':
+      const sleep = (delay) => new Promise(resolve => setTimeout(resolve, delay));
+      const timeoutFunc = async () => {
+        await sleep(timeoutDelay);
+      }
+      timeoutFunc().then(() => {
+        logRequest(req, sessionId, 500, 'Internal Server Error (Timeout)')
+        return res.status(500).json({
+                  code: 'INTERNAL_SERVER_ERROR',
+                  message: 'Internal server error',
+              });
+      });
+      break;
 
     default:
       logRequest(req, sessionId, 400, 'Invalid Mock Response');
