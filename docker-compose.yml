@@ -69,7 +69,7 @@ services:
 
   azure-service-bus-sqledge:
     container_name: pagopa-posgw-azure-service-bus-sqledge
-    image: "mcr.microsoft.com/azure-sql-edge:latest"
+    image: "mcr.microsoft.com/azure-sql-edge:latest@sha256:902628a8be89e35dfb7895ca31d602974c7bafde4d583a0d0873844feb1c42cf"
     networks:
       - pagopa-posgw-net
     environment:
@@ -97,7 +97,7 @@ services:
 
   azure-service-bus-explorer:
     container_name: pagopa-posgw-azure-service-bus-explorer
-    image: ghcr.io/tombiddulph/service-bus-emulator-explorer:latest
+    image: ghcr.io/tombiddulph/service-bus-emulator-explorer:latest@sha256:e5749118ea34bb22ae0977c1c2dadca01f44731403f0e950133d61a6d72a779f
     platform: linux/amd64
     depends_on:
       - azure-service-bus-emulator
