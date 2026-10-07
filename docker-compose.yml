@@ -292,6 +292,16 @@ services:
     networks:
       - pagopa-posgw-net
 
+  psp-mock:
+    container_name: psp-mock
+    build:
+      context: ./psp-mock
+      dockerfile: Dockerfile.psp-mock
+    ports:
+      - "${PSP_MOCK_PORT:-3001}:3000"
+    networks:
+      - pagopa-posgw-net
+
 networks:
   pagopa-posgw-net:
     name: pagopa-posgw-net
