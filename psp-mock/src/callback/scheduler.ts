@@ -11,8 +11,9 @@ const REQUEST_TIMEOUT_MS = 5000;
 const MAX_TIMER_MS = 600_000;
 
 const later = (delayMs: number, run: () => void): void => {
+  const bounded = delayMs <= MAX_TIMER_MS ? Math.max(0, delayMs) : MAX_TIMER_MS;
   // unref: a pending callback must not keep the process alive on shutdown
-  setTimeout(run, Math.min(Math.max(0, delayMs), MAX_TIMER_MS)).unref();
+  setTimeout(run, bounded).unref();
 };
 
 const send = async (sessionId: string, session: Session, callback: CallbackConfig, attempt: number) => {
