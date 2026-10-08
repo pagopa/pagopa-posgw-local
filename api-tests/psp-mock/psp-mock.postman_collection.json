@@ -1,0 +1,293 @@
+{
+  "info": {
+    "_postman_id": "fcc1f2b7-852f-4326-ad99-88e40330b933",
+    "name": "POS Gateway psp-mock",
+    "description": "Requests to drive the PSP mock of pagopa-posgw-local. Requires the psp-mock container (docker compose up --build --detach psp-mock).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{HOSTNAME}}/health"
+      }
+    },
+    {
+      "name": "Configuration",
+      "item": [
+        {
+          "name": "Get configuration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{HOSTNAME}}/config"
+          }
+        },
+        {
+          "name": "Reset configuration",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{HOSTNAME}}/config"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Operation presets",
+      "description": "Each request is a partial update: it changes only the properties in its body and adds up with the previous ones. Use Reset configuration to go back to the defaults.",
+      "item": [
+        {
+          "name": "Terminals: KO 404",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operations\": {\n    \"terminals\": {\n      \"mode\": \"KO\",\n      \"koStatus\": 404\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Terminals: timeout",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operations\": {\n    \"terminals\": {\n      \"mode\": \"TIMEOUT\",\n      \"timeoutMs\": 30000\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Auth request: KO 503",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operations\": {\n    \"authRequest\": {\n      \"mode\": \"KO\",\n      \"koStatus\": 503\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Auth request: timeout",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operations\": {\n    \"authRequest\": {\n      \"mode\": \"TIMEOUT\",\n      \"timeoutMs\": 30000\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Session outcome: KO 404",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operations\": {\n    \"sessionOutcome\": {\n      \"mode\": \"KO\",\n      \"koStatus\": 404\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Session outcome: timeout",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operations\": {\n    \"sessionOutcome\": {\n      \"mode\": \"TIMEOUT\",\n      \"timeoutMs\": 30000\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Callback presets",
+      "description": "Partial updates of the outcome callback settings. Use Reset configuration to go back to the defaults.",
+      "item": [
+        {
+          "name": "Callback: KO outcome",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callback\": {\n    \"outcome\": \"DECLINED\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Callback: never sent",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callback\": {\n    \"delivery\": \"NONE\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Callback: sent after session expiry",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callback\": {\n    \"delivery\": \"LATE\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Callback: fast retries",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callback\": {\n    \"retry\": {\n      \"minDelayMs\": 200,\n      \"maxAttempts\": 5\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Callback: target on the host",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callback\": {\n    \"baseUrl\": \"http://host.docker.internal:8080\",\n    \"apiKey\": \"psp-mock-api-key\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
