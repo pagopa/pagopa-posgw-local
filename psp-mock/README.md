@@ -7,9 +7,8 @@ spec.
 
 ## Status
 
-The endpoints served by the PSP and the configuration API are available. The
-outcome callback is not sent yet, so the `callback` settings other than
-`outcome` and `delayMs` have no effect so far.
+The endpoints served by the PSP, the outcome callback and the configuration API
+are available.
 
 | Endpoint                                       | Status    |
 |------------------------------------------------|-----------|
@@ -17,7 +16,7 @@ outcome callback is not sent yet, so the `callback` settings other than
 | `POST /pos/terminals`                          | available |
 | `POST /pos/sessions/{sessionId}/auth-requests` | available |
 | `GET /pos/sessions/{sessionId}/auth-requests`  | available |
-| Outcome callback (`PATCH` sent by the mock)    | planned   |
+| Outcome callback (`PATCH` sent by the mock)    | available |
 | Configuration API (`/config`)                  | available |
 
 Any route that is not mocked answers `404` with a `ProblemJson` body:
@@ -105,6 +104,47 @@ curl -i -X POST http://localhost:3001/pos/sessions/session-1/auth-requests \
 curl -s http://localhost:3001/pos/sessions/session-1/auth-requests -H "$CORRELATION_ID"
 ```
 
+## Outcome callback
+
+After an accepted authorization request the mock, acting as the PSP, sends the
+outcome to the POS Gateway:
+
+```text
+PATCH {callback.baseUrl}/pos/sessions/{sessionId}/auth-requests
+Ocp-Apim-Subscription-Key: {callback.apiKey}
+Authorization: Bearer {outcomeAuthToken of the authorization request}
+x-correlation-id: {x-correlation-id of the authorization request}
+```
+
+The body is the same outcome returned by the `GET`. The call uses the `callback`
+settings in force when the authorization request was accepted. The same request
+sent again does not trigger a second callback.
+
+| `callback.delivery` | When the callback is sent |
+|---------------------|---------------------------|
+| `SEND`              | `callback.delayMs` after the authorization request. |
+| `NONE`              | Never: the session expires on the POS Gateway side. The outcome is still available through the `GET`. |
+| `LATE`              | Once, 1 s after the session has expired. |
+
+The session expires after the `authorizationTimeout` of the terminal plus a 10 s
+grace period, counted from the authorization request.
+
+Retries follow what the PSP is asked to do:
+
+| Answer | Behavior |
+|--------|----------|
+| `2xx` | Delivered, stop. |
+| `500`, `502`, `503`, `504`, no answer within 5 s, connection error | Retry after `retry.minDelayMs`. |
+| `429` | Retry after the `Retry-After` header, never less than `retry.minDelayMs`. |
+| `422` (session expired), any other status | Stop. |
+
+Retries also stop when `retry.maxAttempts` is reached or when the next attempt
+would fall after the session expiry.
+
+`GET /config/sessions` returns the stored sessions, each with the log of its
+callback attempts (time, status or error, and what was decided next). The same
+log is written to the container output (`docker compose logs psp-mock`).
+
 ## Configuration API
 
 The behavior of the mock is driven by a configuration held in memory. It is
@@ -115,6 +155,7 @@ lost, with the stored sessions, when the container restarts.
 | `GET /config`    | Returns the current configuration.                      | `200`                                                             |
 | `PATCH /config`  | Partial update: only the properties in the body change. | `200` with the new configuration, `400` with a `ProblemJson` body |
 | `DELETE /config` | Restores the defaults and deletes the stored sessions.  | `204`                                                             |
+| `GET /config/sessions` | Returns the stored sessions with their callback attempts. | `200` |
 
 Default configuration:
 
@@ -226,6 +267,7 @@ psp-mock/
     index.ts            server bootstrap
     app.ts              Express app and routes
     config.ts           environment variables
+    callback/           outcome callback: scheduling and retry policy
     handlers/           one router per group of endpoints
     store/              in-memory state (mock configuration, sessions)
     types.ts            aliases over the generated types

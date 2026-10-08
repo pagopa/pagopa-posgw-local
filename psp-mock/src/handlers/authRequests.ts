@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { Router } from "express";
+import { scheduleCallback } from "../callback/scheduler.js";
 import { getMockConfig } from "../store/mockConfig.js";
 import { getSession, saveSession } from "../store/sessions.js";
 import { problem, type AuthorizationOutcomeDetails, type AuthorizationRequest } from "../types.js";
@@ -8,6 +9,9 @@ import { AUTHORIZATION_REQUEST, validate, withMode } from "./common.js";
 export const authRequestsRouter = Router();
 
 const PATH = "/:sessionId/auth-requests";
+
+// SANP: the session expires after the terminal authorizationTimeout plus a 10 s grace period
+const GRACE_MS = 10_000;
 
 // mock card data from the spec examples
 const CARD = {
@@ -37,6 +41,7 @@ authRequestsRouter.post(PATH, withMode("authRequest"), validate(AUTHORIZATION_RE
   const request = req.body as AuthorizationRequest;
   const existing = getSession(sessionId);
   const { terminals, callback } = getMockConfig();
+  const terminal = terminals.find(({ id }) => id === request.terminalId);
 
   if (request.sessionId !== sessionId) {
     res.status(400).json(problem(400, "Bad Request", "sessionId in the body differs from the path"));
@@ -47,11 +52,21 @@ authRequestsRouter.post(PATH, withMode("authRequest"), validate(AUTHORIZATION_RE
     } else {
       res.status(409).json(problem(409, "Conflict", `Session ${sessionId} exists with a different request`));
     }
-  } else if (!terminals.some((terminal) => terminal.id === request.terminalId)) {
+  } else if (!terminal) {
     res.status(404).json(problem(404, "Not Found", `Unknown terminal ${request.terminalId}`));
   } else {
-    const outcomeAt = Date.now() + callback.delayMs;
-    saveSession(sessionId, { request, outcome: buildOutcome(request, outcomeAt), outcomeAt });
+    const now = Date.now();
+    const outcomeAt = now + callback.delayMs;
+    const session = {
+      request,
+      correlationId: req.get("x-correlation-id") ?? "",
+      outcome: buildOutcome(request, outcomeAt),
+      outcomeAt,
+      expiresAt: now + terminal.authorizationTimeout * 1000 + GRACE_MS,
+      attempts: [],
+    };
+    saveSession(sessionId, session);
+    scheduleCallback(sessionId, session, callback);
     res.status(204).end();
   }
 });
