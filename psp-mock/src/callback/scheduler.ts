@@ -7,10 +7,12 @@ type CallbackConfig = MockConfig["callback"];
 // how long after session expiry the LATE delivery is sent
 const LATE_MARGIN_MS = 1000;
 const REQUEST_TIMEOUT_MS = 5000;
+// upper bound of the configurable delays
+const MAX_TIMER_MS = 600_000;
 
 const later = (delayMs: number, run: () => void): void => {
   // unref: a pending callback must not keep the process alive on shutdown
-  setTimeout(run, Math.max(0, delayMs)).unref();
+  setTimeout(run, Math.min(Math.max(0, delayMs), MAX_TIMER_MS)).unref();
 };
 
 const send = async (sessionId: string, session: Session, callback: CallbackConfig, attempt: number) => {
@@ -18,7 +20,8 @@ const send = async (sessionId: string, session: Session, callback: CallbackConfi
   if (getSession(sessionId) !== session) {
     return;
   }
-  const url = `${callback.baseUrl.replace(/\/+$/, "")}/pos/sessions/${encodeURIComponent(sessionId)}/auth-requests`;
+  const base = callback.baseUrl.endsWith("/") ? callback.baseUrl : `${callback.baseUrl}/`;
+  const url = new URL(`pos/sessions/${encodeURIComponent(sessionId)}/auth-requests`, base);
   let status: number | undefined;
   let retryAfter: string | null = null;
   let error: string | undefined;
