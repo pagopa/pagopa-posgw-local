@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getMockConfig, resetMockConfig, updateMockConfig } from "../store/mockConfig.js";
+import { clearSessions } from "../store/sessions.js";
 import { problem } from "../types.js";
 
 export const mockConfigRouter = Router();
@@ -20,5 +21,6 @@ mockConfigRouter.patch("/",(req, res) => {
 
 mockConfigRouter.delete("/", (_req, res) => {
   resetMockConfig();
+  clearSessions();
   res.status(204).end();
 });
