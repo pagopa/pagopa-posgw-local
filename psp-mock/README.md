@@ -64,7 +64,7 @@ GitHub (see below).
 ## Types generated from the PSP spec
 
 The request and response types come from
-[`psp_pos_layer.json`](https://github.com/pagopa/pagopa-api/blob/c52a47fe89c96642cbb71153cf9e956f5216f4c4/openapi/psp_pos_layer.json)
+[`psp_pos_layer.json`](https://github.com/pagopa/pagopa-api/blob/fd7ca1c931e136df2d568262fd9a63941c5d8226/openapi/psp_pos_layer.json)
 in `pagopa-api`, generated with `openapi-typescript`. The spec is pinned to a
 commit through `config.pspSpecRef` in `package.json`: change that value to move
 to a newer version of the contract.

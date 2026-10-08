@@ -9,7 +9,7 @@
     "node": ">=24"
   },
   "config": {
-    "pspSpecRef": "c52a47fe89c96642cbb71153cf9e956f5216f4c4"
+    "pspSpecRef": "fd7ca1c931e136df2d568262fd9a63941c5d8226"
   },
   "scripts": {
     "generate": "openapi-typescript https://raw.githubusercontent.com/pagopa/pagopa-api/$npm_package_config_pspSpecRef/openapi/psp_pos_layer.json -o src/generated/psp-pos-layer.ts",
