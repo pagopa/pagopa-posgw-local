@@ -111,27 +111,35 @@ const schema: Schema = {
 
 type Node = Record<string, unknown>;
 
-// deep-merges patch into current, collecting an error for every unknown or invalid property
+// deep-merges patch into current, collecting an error for every unknown or invalid property.
+// Written property names come from the schema, never from the request body.
 const merge = (rules: Schema, current: Node, patch: unknown, path: string, errors: string[]): Node => {
   if (typeof patch !== "object" || patch === null || Array.isArray(patch)) {
     errors.push(`${path || "body"}: must be an object`);
     return current;
   }
+  const body = patch as Node;
+  const at = (key: string): string => (path ? `${path}.${key}` : key);
+  for (const key of Object.keys(body)) {
+    if (!Object.hasOwn(rules, key)) {
+      errors.push(`${at(key)}: unknown property`);
+    }
+  }
   const next = { ...current };
-  for (const [key, value] of Object.entries(patch)) {
-    const keyPath = path ? `${path}.${key}` : key;
-    const rule = Object.hasOwn(rules, key) ? rules[key] : undefined;
-    if (rule === undefined) {
-      errors.push(`${keyPath}: unknown property`);
-    } else if (typeof rule === "function") {
-      const error = rule(value);
-      if (error === undefined) {
-        next[key] = value;
-      } else {
-        errors.push(`${keyPath}: ${error}`);
-      }
+  for (const [key, rule] of Object.entries(rules)) {
+    if (!Object.hasOwn(body, key)) {
+      continue;
+    }
+    const value = body[key];
+    if (typeof rule !== "function") {
+      next[key] = merge(rule, current[key] as Node, value, at(key), errors);
+      continue;
+    }
+    const error = rule(value);
+    if (error === undefined) {
+      next[key] = value;
     } else {
-      next[key] = merge(rule, current[key] as Node, value, keyPath, errors);
+      errors.push(`${at(key)}: ${error}`);
     }
   }
   return next;
