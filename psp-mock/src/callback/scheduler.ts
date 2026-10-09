@@ -27,7 +27,7 @@ const send = async (sessionId: string, session: Session, callback: CallbackConfi
   let retryAfter: string | null = null;
   let error: string | undefined;
   try {
-    // the spec lists the two security schemes as alternatives: the mock sends both
+    // setting both api key auth (inherithed from`Nuova connettività` authentication mechanism) and bearer auth (for outcome callback authorization)
     const response = await fetch(url, {
       method: "PATCH",
       headers: {
