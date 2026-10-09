@@ -262,6 +262,8 @@ services:
         condition: service_completed_successfully
       signoz-otel-collector:
         condition: service_started
+      azure-service-bus-emulator:
+        condition: service_started
 
   pagopa-posgw-debtposition-handler:
     container_name: pagopa-posgw-debtposition-handler
