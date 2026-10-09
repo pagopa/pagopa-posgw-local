@@ -9,7 +9,7 @@ mockConfigRouter.get("/", (_req, res) => {
 });
 
 // partial update: only the properties in the body change
-mockConfigRouter.put("/", (req, res) => {
+mockConfigRouter.patch("/",(req, res) => {
   const errors = updateMockConfig(req.body);
   if (errors.length > 0) {
     res.status(400).json(problem(400, "Invalid configuration", errors.join("; ")));
