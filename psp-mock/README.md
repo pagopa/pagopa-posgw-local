@@ -7,7 +7,8 @@ spec.
 
 ## Status
 
-This is the project scaffold. No PSP endpoint is mocked yet.
+The configuration API is available. No PSP endpoint is mocked yet, so the
+configuration is stored and validated but nothing reads it so far.
 
 | Endpoint                                       | Status    |
 |------------------------------------------------|-----------|
@@ -16,7 +17,7 @@ This is the project scaffold. No PSP endpoint is mocked yet.
 | `POST /pos/sessions/{sessionId}/auth-requests` | planned   |
 | `GET /pos/sessions/{sessionId}/auth-requests`  | planned   |
 | Outcome callback (`PATCH` sent by the mock)    | planned   |
-| Configuration API (`/config`)                  | planned   |
+| Configuration API (`/config`)                  | available |
 
 Any route that is not mocked answers `404` with a `ProblemJson` body:
 
@@ -57,9 +58,95 @@ GitHub (see below).
 
 ## Environment variables
 
-| name   | description                              | default |
-|--------|------------------------------------------|---------|
-| `PORT` | The port the mock listens to. The mock fails at startup on an invalid value. | `3000`  |
+| name                | description                                                                                                    | default                                         |
+|---------------------|----------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
+| `PORT`              | The port the mock listens to. The mock fails at startup on an invalid value.                                   | `3000`                                          |
+| `CALLBACK_BASE_URL` | Default base URL the outcome callback is sent to. Must be an http(s) URL, the mock fails at startup otherwise. | `http://pagopa-posgw-transactions-handler:8080` |
+| `CALLBACK_API_KEY`  | Default value of the `Ocp-Apim-Subscription-Key` header sent with the outcome callback.                        | `psp-mock-api-key`                              |
+
+The two callback variables only set the defaults of the configuration API:
+`callback.baseUrl` and `callback.apiKey` can be changed at runtime with
+`PATCH /config`.
+
+## Configuration API
+
+The behavior of the mock is driven by a configuration held in memory. It is
+lost when the container restarts.
+
+| Endpoint         | Description                                             | Response                                                          |
+|------------------|---------------------------------------------------------|-------------------------------------------------------------------|
+| `GET /config`    | Returns the current configuration.                      | `200`                                                             |
+| `PATCH /config`  | Partial update: only the properties in the body change. | `200` with the new configuration, `400` with a `ProblemJson` body |
+| `DELETE /config` | Restores the defaults.                                  | `204`                                                             |
+
+Default configuration:
+
+```json
+{
+  "operations": {
+    "terminals":      { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000 },
+    "authRequest":    { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000 },
+    "sessionOutcome": { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000 }
+  },
+  "callback": {
+    "baseUrl": "http://pagopa-posgw-transactions-handler:8080",
+    "apiKey": "psp-mock-api-key",
+    "outcome": "AUTHORIZED",
+    "delivery": "SEND",
+    "delayMs": 0,
+    "retry": { "minDelayMs": 2000, "maxAttempts": 50 }
+  }
+}
+```
+
+`operations` has one entry per mocked PSP operation: `terminals`
+(`POST /pos/terminals`), `authRequest` (`POST .../auth-requests`) and
+`sessionOutcome` (`GET .../auth-requests`).
+
+| Property    | Values                                                                                                                                     | Description                                                              |
+|-------------|--------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| `mode`      | `OK`, `KO`, `TIMEOUT`                                                                                                                      | `KO` answers with `koStatus`, `TIMEOUT` answers `500` after `timeoutMs`. |
+| `koStatus`  | `terminals`: 400, 401, 404, 500<br>`authRequest`: 400, 401, 404, 409, 422, 429, 500, 502, 503, 504<br>`sessionOutcome`: 400, 404, 429, 500 | Limited to the error statuses the spec declares for the operation.       |
+| `delayMs`   | 0 to 600000                                                                                                                                | Delay before the answer.                                                 |
+| `timeoutMs` | 0 to 600000                                                                                                                                | How long the `TIMEOUT` mode waits.                                       |
+
+`callback` drives the outcome callback the mock sends after an accepted
+authorization request.
+
+| Property            | Values                                                             | Description                                                                                                        |
+|---------------------|--------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| `baseUrl`           | http(s) URL                                                        | Where the `PATCH /pos/sessions/{sessionId}/auth-requests` is sent.                                                 |
+| `apiKey`            | non-empty string                                                   | Value of the `Ocp-Apim-Subscription-Key` header.                                                                   |
+| `outcome`           | `AUTHORIZED`, `DECLINED`, `REFUSED`, `CANCELED_BY_USER`, `TIMEOUT` | Outcome reported by the PSP. `TIMEOUT` is a KO outcome that is still delivered.                                    |
+| `delivery`          | `SEND`, `NONE`, `LATE`                                             | `NONE` never calls back, `LATE` calls back after the session has expired.                                          |
+| `delayMs`           | 0 to 600000                                                        | Delay before the outcome is produced.                                                                              |
+| `retry.minDelayMs`  | 0 to 600000                                                        | Minimum wait between attempts. The default is the SANP minimum (2 s), lower values are accepted to speed up tests. |
+| `retry.maxAttempts` | 1 to 100                                                           | Upper bound on the attempts. With the default, session expiry stops the retries first.                             |
+
+Examples:
+
+```sh
+curl -s http://localhost:3001/config
+
+# terminal list answers 404, the callback is never sent
+curl -s -X PATCH http://localhost:3001/config \
+  -H 'Content-Type: application/json' \
+  -d '{"operations":{"terminals":{"mode":"KO","koStatus":404}},"callback":{"delivery":"NONE"}}'
+
+curl -i -X DELETE http://localhost:3001/config
+```
+
+An update is all or nothing: if any property is unknown or invalid, nothing
+changes and the `400` lists every error in `detail`:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Invalid configuration",
+  "status": 400,
+  "detail": "operations.terminals.koStatus: must be one of 400, 401, 404, 500; callback.foo: unknown property"
+}
+```
 
 ## Types generated from the PSP spec
 
@@ -92,6 +179,8 @@ psp-mock/
     index.ts            server bootstrap
     app.ts              Express app and routes
     config.ts           environment variables
+    handlers/           one router per group of endpoints
+    store/              in-memory state (mock configuration)
     types.ts            aliases over the generated types
     generated/          generated types (not committed)
 ```
