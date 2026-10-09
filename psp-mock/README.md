@@ -66,7 +66,7 @@ GitHub (see below).
 
 The two callback variables only set the defaults of the configuration API:
 `callback.baseUrl` and `callback.apiKey` can be changed at runtime with
-`PUT /config`.
+`PATCH /config`.
 
 ## Configuration API
 
@@ -76,7 +76,7 @@ lost when the container restarts.
 | Endpoint         | Description                                             | Response                                                          |
 |------------------|---------------------------------------------------------|-------------------------------------------------------------------|
 | `GET /config`    | Returns the current configuration.                      | `200`                                                             |
-| `PUT /config`    | Partial update: only the properties in the body change. | `200` with the new configuration, `400` with a `ProblemJson` body |
+| `PATCH /config`  | Partial update: only the properties in the body change. | `200` with the new configuration, `400` with a `ProblemJson` body |
 | `DELETE /config` | Restores the defaults.                                  | `204`                                                             |
 
 Default configuration:
@@ -129,7 +129,7 @@ Examples:
 curl -s http://localhost:3001/config
 
 # terminal list answers 404, the callback is never sent
-curl -s -X PUT http://localhost:3001/config \
+curl -s -X PATCH http://localhost:3001/config \
   -H 'Content-Type: application/json' \
   -d '{"operations":{"terminals":{"mode":"KO","koStatus":404}},"callback":{"delivery":"NONE"}}'
 
