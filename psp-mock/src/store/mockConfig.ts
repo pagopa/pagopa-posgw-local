@@ -1,5 +1,5 @@
 import { config, isHttpUrl } from "../config.js";
-import type { AuthorizationOutcome } from "../types.js";
+import type { AuthorizationOutcome, PosTerminal } from "../types.js";
 
 const MODES = ["OK", "KO", "TIMEOUT"] as const;
 const DELIVERIES = ["SEND", "NONE", "LATE"] as const;
@@ -10,6 +10,8 @@ const OUTCOMES = [
   "CANCELED_BY_USER",
   "TIMEOUT",
 ] as const satisfies readonly AuthorizationOutcome[];
+const TERMINAL_STATUSES: readonly unknown[] = ["AVAILABLE", "UNAVAILABLE", "MAINTENANCE"];
+const TERMINAL_STATUS_CODES: readonly unknown[] = ["S0001", "S0002", "S0003"];
 
 // error statuses declared by psp_pos_layer.json for each operation
 const KO_STATUSES = {
@@ -28,7 +30,13 @@ export interface OperationConfig {
 }
 
 export interface MockConfig {
-  operations: Record<keyof typeof KO_STATUSES, OperationConfig>;
+  terminals: PosTerminal[];
+  operations: {
+    terminals: OperationConfig;
+    authRequest: OperationConfig;
+    // pendingStatus: answer of the GET while the outcome is not available yet
+    sessionOutcome: OperationConfig & { pendingStatus: number };
+  };
   callback: {
     baseUrl: string;
     apiKey: string;
@@ -47,10 +55,14 @@ const defaultOperation = (): OperationConfig => ({
 });
 
 const defaults = (): MockConfig => ({
+  terminals: [
+    { id: "POS-001", description: "POS Sportello 01", status: "AVAILABLE", authorizationTimeout: 60 },
+    { id: "POS-002", description: "POS Sportello 02", status: "MAINTENANCE", authorizationTimeout: 30 },
+  ],
   operations: {
     terminals: defaultOperation(),
     authRequest: defaultOperation(),
-    sessionOutcome: defaultOperation(),
+    sessionOutcome: { ...defaultOperation(), pendingStatus: 404 },
   },
   callback: {
     baseUrl: config.callbackBaseUrl,
@@ -89,11 +101,36 @@ const operationSchema = (koStatuses: readonly number[]): Schema => ({
   timeoutMs: intBetween(0, MAX_MS),
 });
 
+const isTerminal = (value: unknown): boolean => {
+  const terminal = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+  return (
+    typeof terminal.id === "string" &&
+    terminal.id !== "" &&
+    typeof terminal.description === "string" &&
+    TERMINAL_STATUSES.includes(terminal.status) &&
+    (terminal.statusCode === undefined || TERMINAL_STATUS_CODES.includes(terminal.statusCode)) &&
+    intBetween(1, 60)(terminal.authorizationTimeout) === undefined
+  );
+};
+
+// the list is replaced as a whole
+const terminalList: Check = (value) =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every(isTerminal) &&
+  new Set(value.map((terminal) => terminal.id)).size === value.length
+    ? undefined
+    : "must be a non-empty array of terminals with unique id, description, status, optional statusCode and authorizationTimeout between 1 and 60";
+
 const schema: Schema = {
+  terminals: terminalList,
   operations: {
     terminals: operationSchema(KO_STATUSES.terminals),
     authRequest: operationSchema(KO_STATUSES.authRequest),
-    sessionOutcome: operationSchema(KO_STATUSES.sessionOutcome),
+    sessionOutcome: {
+      ...operationSchema(KO_STATUSES.sessionOutcome),
+      pendingStatus: oneOf(KO_STATUSES.sessionOutcome),
+    },
   },
   callback: {
     baseUrl: (value) => (isHttpUrl(value) ? undefined : "must be an http(s) URL"),
