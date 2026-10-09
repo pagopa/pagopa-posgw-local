@@ -159,6 +159,18 @@ to a newer version of the contract.
 `npm run generate` writes `src/generated/psp-pos-layer.ts`. The file is not
 committed: it is produced by `npm run build` (locally and in the image build).
 
+## Postman collection
+
+A Postman collection with its local environment is in
+[`api-tests/psp-mock`](../api-tests/psp-mock): import both files in Postman and
+select the environment. It has one request per configuration preset (an
+operation in KO or timeout, callback never sent or sent late, and so on), as an
+alternative to the curl commands above.
+
+The presets are partial updates, so they add up: use "Reset configuration" to go
+back to the defaults. The environment points to `http://localhost:3001`: change
+`HOSTNAME` if the mock runs on a different port.
+
 ## Run without Docker
 
 Requires Node 24 or later. Run from the `psp-mock` folder:
