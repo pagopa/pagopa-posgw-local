@@ -1,12 +1,17 @@
 import { Router } from "express";
 import { getMockConfig, resetMockConfig, updateMockConfig } from "../store/mockConfig.js";
-import { clearSessions } from "../store/sessions.js";
+import { clearSessions, listSessions } from "../store/sessions.js";
 import { problem } from "../types.js";
 
 export const mockConfigRouter = Router();
 
 mockConfigRouter.get("/", (_req, res) => {
   res.json(getMockConfig());
+});
+
+// stored sessions with the log of the callback attempts
+mockConfigRouter.get("/sessions", (_req, res) => {
+  res.json(listSessions());
 });
 
 // partial update: only the properties in the body change
