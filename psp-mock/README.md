@@ -171,6 +171,14 @@ The presets are partial updates, so they add up: use "Reset configuration" to go
 back to the defaults. The environment points to `http://localhost:3001`: change
 `HOSTNAME` if the mock runs on a different port.
 
+The "PSP operations" folder calls the mocked endpoints (terminal list,
+authorization request, session outcome), and "Get sessions" shows the stored
+sessions with their callback attempts. The session id comes from `SESSION_ID`
+in the environment: change it to start a new session, because the same
+authorization request sent again is a replay. A session keeps the callback
+settings in force when it was accepted, so send the presets before the
+authorization request.
+
 ## Run without Docker
 
 Requires Node 24 or later. Run from the `psp-mock` folder:
