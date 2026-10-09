@@ -42,7 +42,7 @@
         {
           "name": "Terminals: KO 404",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -64,7 +64,7 @@
         {
           "name": "Terminals: timeout",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -86,7 +86,7 @@
         {
           "name": "Auth request: KO 503",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -108,7 +108,7 @@
         {
           "name": "Auth request: timeout",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -130,7 +130,7 @@
         {
           "name": "Session outcome: KO 404",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -152,7 +152,7 @@
         {
           "name": "Session outcome: timeout",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -180,7 +180,7 @@
         {
           "name": "Callback: KO outcome",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -202,7 +202,7 @@
         {
           "name": "Callback: never sent",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -224,7 +224,7 @@
         {
           "name": "Callback: sent after session expiry",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -246,7 +246,7 @@
         {
           "name": "Callback: fast retries",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
@@ -268,7 +268,7 @@
         {
           "name": "Callback: target on the host",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
