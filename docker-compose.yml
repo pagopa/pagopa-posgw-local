@@ -248,6 +248,8 @@ services:
     env_file: pagopa-posgw-transactions-handler/transactions-handler.env
     build:
       context: .
+      secrets:
+        - GITHUB_TOKEN
       args:
         POSGW_TRANSACTIONS_HANDLER_GIT_REF: ${POSGW_TRANSACTIONS_HANDLER_GIT_REF}
       dockerfile: pagopa-posgw-transactions-handler/Dockerfile.transactions-handler.${POSGW_TRANSACTIONS_HANDLER_COMPILATION_MODE:-native}
@@ -260,12 +262,16 @@ services:
         condition: service_completed_successfully
       signoz-otel-collector:
         condition: service_started
+      azure-service-bus-emulator:
+        condition: service_started
 
   pagopa-posgw-debtposition-handler:
     container_name: pagopa-posgw-debtposition-handler
     env_file: pagopa-posgw-debtposition-handler/debtposition-handler.env
     build:
       context: .
+      secrets:
+        - GITHUB_TOKEN
       args:
         POSGW_DEBTPOSITION_HANDLER_GIT_REF: ${POSGW_DEBTPOSITION_HANDLER_GIT_REF}
       dockerfile: pagopa-posgw-debtposition-handler/Dockerfile.debtposition-handler.${POSGW_DEBTPOSITION_HANDLER_COMPILATION_MODE:-native}
@@ -303,3 +309,7 @@ volumes:
   signoz-data:
   signoz-zookeeper-data:
   signoz-clickhouse-data:
+
+secrets:
+  GITHUB_TOKEN:
+    environment: GITHUB_TOKEN

@@ -19,7 +19,7 @@ COPY --from=clone ${REPO}/ .
 
 #build project
 RUN chmod +x ./gradlew
-RUN ./gradlew build -x test
+RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN ./gradlew build -x test
 
 #remove plain jar, required by native compilations only
 RUN rm build/libs/*-plain.jar
