@@ -41,7 +41,7 @@ docker compose up --build --detach ec-mock
 ```
 
 The mock is available at `http://localhost:3000`. To use a different host port,
-set `EC_MOCK_PORT` in the root `.env` file or provide it when starting the mock:
+change `EC_MOCK_PORT` in the root `.env` file or provide it when starting the mock:
 
 ```sh
 EC_MOCK_PORT=3005 docker compose up --build --detach ec-mock

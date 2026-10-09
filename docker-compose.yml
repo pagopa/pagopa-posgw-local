@@ -285,7 +285,7 @@ services:
       context: .
       dockerfile: ec-mock/Dockerfile.ec-mock
     ports:
-      - "${EC_MOCK_PORT:-3000}:3000"
+      - "${EC_MOCK_PORT}:3000"
     volumes:
       - ./ec-mock/ec-mock.json:/config/ec-server.json
       - ./ec-mock/middleware.js:/config/middleware.js:ro
@@ -298,7 +298,7 @@ services:
       context: ./psp-mock
       dockerfile: Dockerfile.psp-mock
     ports:
-      - "${PSP_MOCK_PORT:-3001}:3000"
+      - "${PSP_MOCK_PORT}:3000"
     networks:
       - pagopa-posgw-net
 

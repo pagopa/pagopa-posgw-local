@@ -39,7 +39,7 @@ curl -i http://localhost:3001/health
 ```
 
 The mock is available at `http://localhost:3001`. To use a different host port,
-set `PSP_MOCK_PORT` in the root `.env` file or provide it when starting the mock:
+change `PSP_MOCK_PORT` in the root `.env` file or provide it when starting the mock:
 
 ```sh
 PSP_MOCK_PORT=3006 docker compose up --build --detach psp-mock
