@@ -299,6 +299,9 @@ services:
       dockerfile: Dockerfile.psp-mock
     ports:
       - "${PSP_MOCK_PORT}:3000"
+    # lets the callback reach a service on the host also on Linux Docker Engine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - pagopa-posgw-net
 
