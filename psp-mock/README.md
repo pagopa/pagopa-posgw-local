@@ -88,6 +88,11 @@ set when the request was accepted. Until then the `GET` answers with
 `operations.sessionOutcome.pendingStatus` (`404` by default): the spec has no
 representation for a pending session.
 
+An authorization request for a terminal whose `status` is not `AVAILABLE`
+answers with `operations.authRequest.unavailableStatus` (`422` by default) and
+no session is stored. In the default terminal list `POS-002` is in
+`MAINTENANCE`.
+
 Each operation can be forced to fail or to time out through its `mode` in the
 configuration. The forced answer comes before any validation of the request.
 
@@ -126,7 +131,7 @@ Default configuration:
   ],
   "operations": {
     "terminals":      { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000 },
-    "authRequest":    { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000 },
+    "authRequest":    { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000, "unavailableStatus": 422 },
     "sessionOutcome": { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000, "pendingStatus": 404 }
   },
   "callback": {
@@ -149,13 +154,14 @@ whole: at least one terminal, unique `id`, `status` in `AVAILABLE`,
 (`POST /pos/terminals`), `authRequest` (`POST .../auth-requests`) and
 `sessionOutcome` (`GET .../auth-requests`).
 
-| Property        | Values                                                                                                                                     | Description                                                                    |
-|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
-| `mode`          | `OK`, `KO`, `TIMEOUT`                                                                                                                      | `KO` answers with `koStatus`, `TIMEOUT` answers `500` after `timeoutMs`.       |
-| `koStatus`      | `terminals`: 400, 401, 404, 500<br>`authRequest`: 400, 401, 404, 409, 422, 429, 500, 502, 503, 504<br>`sessionOutcome`: 400, 404, 429, 500 | Limited to the error statuses the spec declares for the operation.             |
-| `delayMs`       | 0 to 600000                                                                                                                                | Delay before the answer.                                                       |
-| `timeoutMs`     | 0 to 600000                                                                                                                                | How long the `TIMEOUT` mode waits.                                             |
-| `pendingStatus` | 400, 404, 429, 500                                                                                                                         | `sessionOutcome` only: answer of the `GET` while the outcome is not available. |
+| Property            | Values                                                                                                                                     | Description                                                                    |
+|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| `mode`              | `OK`, `KO`, `TIMEOUT`                                                                                                                      | `KO` answers with `koStatus`, `TIMEOUT` answers `500` after `timeoutMs`.       |
+| `koStatus`          | `terminals`: 400, 401, 404, 500<br>`authRequest`: 400, 401, 404, 409, 422, 429, 500, 502, 503, 504<br>`sessionOutcome`: 400, 404, 429, 500 | Limited to the error statuses the spec declares for the operation.             |
+| `delayMs`           | 0 to 600000                                                                                                                                | Delay before the answer.                                                       |
+| `timeoutMs`         | 0 to 600000                                                                                                                                | How long the `TIMEOUT` mode waits.                                             |
+| `unavailableStatus` | 422, 500, 502, 503, 504                                                                                                                    | `authRequest` only: answer of the `POST` when the terminal is not `AVAILABLE`. |
+| `pendingStatus`     | 400, 404, 429, 500                                                                                                                         | `sessionOutcome` only: answer of the `GET` while the outcome is not available. |
 
 `callback` drives the outcome callback the mock sends after an accepted
 authorization request.

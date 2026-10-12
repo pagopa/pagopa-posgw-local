@@ -36,7 +36,9 @@ authRequestsRouter.post(PATH, withMode("authRequest"), validate(AUTHORIZATION_RE
   const sessionId = String(req.params.sessionId);
   const request = req.body as AuthorizationRequest;
   const existing = getSession(sessionId);
-  const { terminals, callback } = getMockConfig();
+  const { terminals, operations, callback } = getMockConfig();
+  const terminal = terminals.find(({ id }) => id === request.terminalId);
+  const { unavailableStatus } = operations.authRequest;
 
   if (request.sessionId !== sessionId) {
     res.status(400).json(problem(400, "Bad Request", "sessionId in the body differs from the path"));
@@ -47,8 +49,12 @@ authRequestsRouter.post(PATH, withMode("authRequest"), validate(AUTHORIZATION_RE
     } else {
       res.status(409).json(problem(409, "Conflict", `Session ${sessionId} exists with a different request`));
     }
-  } else if (!terminals.some((terminal) => terminal.id === request.terminalId)) {
+  } else if (!terminal) {
     res.status(404).json(problem(404, "Not Found", `Unknown terminal ${request.terminalId}`));
+  } else if (terminal.status !== "AVAILABLE") {
+    res
+      .status(unavailableStatus)
+      .json(problem(unavailableStatus, "Terminal not available", `Terminal ${terminal.id} is ${terminal.status}`));
   } else {
     const outcomeAt = Date.now() + callback.delayMs;
     saveSession(sessionId, { request, outcome: buildOutcome(request, outcomeAt), outcomeAt });

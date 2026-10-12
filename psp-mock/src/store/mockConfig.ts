@@ -19,6 +19,8 @@ const KO_STATUSES = {
   authRequest: [400, 401, 404, 409, 422, 429, 500, 502, 503, 504],
   sessionOutcome: [400, 404, 429, 500],
 } as const;
+// 422 or a 5xx when the PSP passes on the terminal timeout
+const UNAVAILABLE_STATUSES = [422, 500, 502, 503, 504] as const;
 
 const MAX_MS = 600_000;
 
@@ -33,7 +35,8 @@ export interface MockConfig {
   terminals: PosTerminal[];
   operations: {
     terminals: OperationConfig;
-    authRequest: OperationConfig;
+    // unavailableStatus: answer of the POST when the terminal is not AVAILABLE
+    authRequest: OperationConfig & { unavailableStatus: number };
     // pendingStatus: answer of the GET while the outcome is not available yet
     sessionOutcome: OperationConfig & { pendingStatus: number };
   };
@@ -61,7 +64,7 @@ const defaults = (): MockConfig => ({
   ],
   operations: {
     terminals: defaultOperation(),
-    authRequest: defaultOperation(),
+    authRequest: { ...defaultOperation(), unavailableStatus: 422 },
     sessionOutcome: { ...defaultOperation(), pendingStatus: 404 },
   },
   callback: {
@@ -126,7 +129,10 @@ const schema: Schema = {
   terminals: terminalList,
   operations: {
     terminals: operationSchema(KO_STATUSES.terminals),
-    authRequest: operationSchema(KO_STATUSES.authRequest),
+    authRequest: {
+      ...operationSchema(KO_STATUSES.authRequest),
+      unavailableStatus: oneOf(UNAVAILABLE_STATUSES),
+    },
     sessionOutcome: {
       ...operationSchema(KO_STATUSES.sessionOutcome),
       pendingStatus: oneOf(KO_STATUSES.sessionOutcome),
