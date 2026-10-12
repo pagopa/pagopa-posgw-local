@@ -9,19 +9,19 @@ In the _.env_ file there are configurations related to containers that can be cu
 
 #### Infrastructure Services
 
-| name                                   | description                                                        |
-|----------------------------------------|--------------------------------------------------------------------|
-| MONGO_PORT                             | The port the mongodb listens to.                                   |
-| MONGO_EXPRESS_PORT                     | The port the mongo-express listens to.                             |
-| REDIS_PORT                             | The port the redis listens to.                                     |
-| REDIS_INSIGHT_PORT                     | The port the redis-insight listens to.                             |
-| AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT   | Host port for the Service Bus emulator management/health endpoint. |
-| AZURE_SERVICE_BUS_EXPLORER_UI_PORT     | Host port for the Service Bus Explorer web UI.                     |
-| AZURE_SERVICE_BUS_EXPLORER_SECONDARY_PORT | Host port for the explorer secondary HTTP endpoint.             |
-| SIGNOZ_PORT                            | The port the SigNoz observability UI listens to.                   |
-| POSGW_<service_name>_GIT_REF*          | The git ref to be fetched when building the `<service_name>` image |
-| POSGW_<service_name>_PORT*             | The HTTP port where the `<service_name>` service will listen       |
-| POSGW_<service_name>_COMPILATION_MODE* | Build mode for `<service_name>` (`native` or `jvm`)                |
+| name                                      | description                                                        |
+|-------------------------------------------|--------------------------------------------------------------------|
+| MONGO_PORT                                | The port the mongodb listens to.                                   |
+| MONGO_EXPRESS_PORT                        | The port the mongo-express listens to.                             |
+| REDIS_PORT                                | The port the redis listens to.                                     |
+| REDIS_INSIGHT_PORT                        | The port the redis-insight listens to.                             |
+| AZURE_SERVICE_BUS_EMULATOR_HTTP_PORT      | Host port for the Service Bus emulator management/health endpoint. |
+| AZURE_SERVICE_BUS_EXPLORER_UI_PORT        | Host port for the Service Bus Explorer web UI.                     |
+| AZURE_SERVICE_BUS_EXPLORER_SECONDARY_PORT | Host port for the explorer secondary HTTP endpoint.                |
+| SIGNOZ_PORT                               | The port the SigNoz observability UI listens to.                   |
+| POSGW_<service_name>_GIT_REF*             | The git ref to be fetched when building the `<service_name>` image |
+| POSGW_<service_name>_PORT*                | The HTTP port where the `<service_name>` service will listen       |
+| POSGW_<service_name>_COMPILATION_MODE*    | Build mode for `<service_name>` (`native` or `jvm`)                |
 
 \* The `POSGW_<service_name>_` prefix means these properties are present once per pagoPA POS gateway service
 
@@ -54,6 +54,15 @@ You can check data persisted to either Mongo, Redis or SigNoz for example with t
 | `SigNoz UI`                 | http://localhost:${SIGNOZ_PORT}                                  |
 | `ClickHouse`                | http://localhost:8123 (HTTP), 9001 (native)                      |
 | `OTEL Collector`            | http://localhost:4318 (HTTP), 4317 (gRPC)                        |
+
+#### Mocks
+
+External systems are replaced by mocks, each documented in its own folder:
+
+| service    | description                                  | url                                              | docs                                     |
+|------------|----------------------------------------------|--------------------------------------------------|------------------------------------------|
+| `ec-mock`  | Mock of the EC authorization-request API     | http://localhost:${EC_MOCK_PORT} (default 3000)  | [ec-mock/README.md](ec-mock/README.md)   |
+| `psp-mock` | Mock of the PSP ("tesoriere") POS layer APIs | http://localhost:${PSP_MOCK_PORT} (default 3001) | [psp-mock/README.md](psp-mock/README.md) |
 
 
 
