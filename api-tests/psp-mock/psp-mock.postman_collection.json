@@ -32,6 +32,14 @@
             "header": [],
             "url": "{{HOSTNAME}}/config"
           }
+        },
+        {
+          "name": "Get sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{HOSTNAME}}/config/sessions"
+          }
         }
       ]
     },
@@ -279,6 +287,125 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"callback\": {\n    \"baseUrl\": \"http://host.docker.internal:8080\",\n    \"apiKey\": \"psp-mock-api-key\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Callback: outcome after 10 s",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{HOSTNAME}}/config",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callback\": {\n    \"delayMs\": 10000\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PSP operations",
+      "description": "The operations served by the PSP. Change SESSION_ID in the environment to start a new session: the same authorization request sent again is a replay (204), a different one for the same session is a conflict (409). A session keeps the callback settings in force when it was accepted: send the presets first.",
+      "item": [
+        {
+          "name": "Terminal list",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-correlation-id",
+                "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              }
+            ],
+            "url": "{{HOSTNAME}}/pos/terminals",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"psp\": {\n    \"id\": \"PSP_001\",\n    \"broker\": \"INT_123\",\n    \"channel\": \"CANALE_POS\"\n  },\n  \"creditorInstitution\": {\n    \"fiscalCode\": \"80001230456\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Authorization request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-correlation-id",
+                "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              }
+            ],
+            "url": "{{HOSTNAME}}/pos/sessions/{{SESSION_ID}}/auth-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1500,\n  \"psp\": {\n    \"id\": \"PSP_001\",\n    \"broker\": \"INT_123\",\n    \"channel\": \"CANALE_POS\"\n  },\n  \"creditorInstitution\": {\n    \"fiscalCode\": \"80001230456\"\n  },\n  \"terminalId\": \"POS-001\",\n  \"outcomeAuthToken\": \"token\",\n  \"sessionId\": \"{{SESSION_ID}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Session outcome",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-correlation-id",
+                "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              }
+            ],
+            "url": "{{HOSTNAME}}/pos/sessions/{{SESSION_ID}}/auth-requests"
+          }
+        },
+        {
+          "name": "Authorization request: unknown terminal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-correlation-id",
+                "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              }
+            ],
+            "url": "{{HOSTNAME}}/pos/sessions/unknown-terminal/auth-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1500,\n  \"psp\": {\n    \"id\": \"PSP_001\",\n    \"broker\": \"INT_123\",\n    \"channel\": \"CANALE_POS\"\n  },\n  \"creditorInstitution\": {\n    \"fiscalCode\": \"80001230456\"\n  },\n  \"terminalId\": \"NOPE\",\n  \"outcomeAuthToken\": \"token\",\n  \"sessionId\": \"unknown-terminal\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
