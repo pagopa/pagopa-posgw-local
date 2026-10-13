@@ -7,16 +7,17 @@ spec.
 
 ## Status
 
-This is the project scaffold. No PSP endpoint is mocked yet.
+The endpoints served by the PSP, the outcome callback and the configuration API
+are available.
 
 | Endpoint                                       | Status    |
 |------------------------------------------------|-----------|
 | `GET /health`                                  | available |
-| `POST /pos/terminals`                          | planned   |
-| `POST /pos/sessions/{sessionId}/auth-requests` | planned   |
-| `GET /pos/sessions/{sessionId}/auth-requests`  | planned   |
-| Outcome callback (`PATCH` sent by the mock)    | planned   |
-| Configuration API (`/config`)                  | planned   |
+| `POST /pos/terminals`                          | available |
+| `POST /pos/sessions/{sessionId}/auth-requests` | available |
+| `GET /pos/sessions/{sessionId}/auth-requests`  | available |
+| Outcome callback (`PATCH` sent by the mock)    | available |
+| Configuration API (`/config`)                  | available |
 
 Any route that is not mocked answers `404` with a `ProblemJson` body:
 
@@ -25,7 +26,7 @@ Any route that is not mocked answers `404` with a `ProblemJson` body:
   "type": "about:blank",
   "title": "Not found",
   "status": 404,
-  "detail": "No mock defined for POST /pos/terminals"
+  "detail": "No mock defined for POST /pos/reconciliations/batches"
 }
 ```
 
@@ -57,20 +58,220 @@ GitHub (see below).
 
 ## Environment variables
 
-| name   | description                              | default |
-|--------|------------------------------------------|---------|
-| `PORT` | The port the mock listens to. The mock fails at startup on an invalid value. | `3000`  |
+| name                | description                                                                                                    | default                                         |
+|---------------------|----------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
+| `PORT`              | The port the mock listens to. The mock fails at startup on an invalid value.                                   | `3000`                                          |
+| `CALLBACK_BASE_URL` | Default base URL the outcome callback is sent to. Must be an http(s) URL, the mock fails at startup otherwise. | `http://pagopa-posgw-transactions-handler:8080` |
+| `CALLBACK_API_KEY`  | Default value of the `Ocp-Apim-Subscription-Key` header sent with the outcome callback.                        | `psp-mock-api-key`                              |
+
+The two callback variables only set the defaults of the configuration API:
+`callback.baseUrl` and `callback.apiKey` can be changed at runtime with
+`PATCH /config`.
+
+## Mocked endpoints
+
+The mock serves plain HTTP, without the mTLS the spec asks for. Every endpoint
+requires the `x-correlation-id` header (a UUID) and answers `400`, listing what
+is missing or invalid, when the header or a required body field is not valid.
+Errors have a `ProblemJson` body.
+
+| Endpoint                                       | Behavior                                                                                                                                                                                                                                               |
+|------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `POST /pos/terminals`                          | `200` with the configured terminal list.                                                                                                                                                                                                               |
+| `POST /pos/sessions/{sessionId}/auth-requests` | `204` and the session is stored. The same request again answers `204` (idempotent), a different request for the same session `409`. `404` when `terminalId` is not in the terminal list, `400` when the `sessionId` in the body differs from the path. |
+| `GET /pos/sessions/{sessionId}/auth-requests`  | `200` with the outcome of the session, `404` for an unknown session.                                                                                                                                                                                   |
+
+The outcome of a session is the configured `callback.outcome` and becomes
+available `callback.delayMs` after the authorization request, using the values
+set when the request was accepted. Until then the `GET` answers with
+`operations.sessionOutcome.pendingStatus` (`404` by default): the spec has no
+representation for a pending session.
+
+An authorization request for a terminal whose `status` is not `AVAILABLE`
+answers with `operations.authRequest.unavailableStatus` (`422` by default) and
+no session is stored. In the default terminal list `POS-002` is in
+`MAINTENANCE`.
+
+Each operation can be forced to fail or to time out through its `mode` in the
+configuration. The forced answer comes before any validation of the request.
+
+```sh
+CORRELATION_ID='x-correlation-id: 3fa85f64-5717-4562-b3fc-2c963f66afa6'
+
+curl -s -X POST http://localhost:3001/pos/terminals \
+  -H 'Content-Type: application/json' -H "$CORRELATION_ID" \
+  -d '{"psp":{"id":"PSP_001","broker":"INT_123","channel":"CANALE_POS"},"creditorInstitution":{"fiscalCode":"80001230456"}}'
+
+curl -i -X POST http://localhost:3001/pos/sessions/session-1/auth-requests \
+  -H 'Content-Type: application/json' -H "$CORRELATION_ID" \
+  -d '{"amount":1500,"psp":{"id":"PSP_001","broker":"INT_123","channel":"CANALE_POS"},"creditorInstitution":{"fiscalCode":"80001230456"},"terminalId":"POS-001","outcomeAuthToken":"token","sessionId":"session-1"}'
+
+curl -s http://localhost:3001/pos/sessions/session-1/auth-requests -H "$CORRELATION_ID"
+```
+
+## Outcome callback
+
+After an accepted authorization request the mock, acting as the PSP, sends the
+outcome to the POS Gateway:
+
+```text
+PATCH {callback.baseUrl}/pos/sessions/{sessionId}/auth-requests
+Ocp-Apim-Subscription-Key: {callback.apiKey}
+Authorization: Bearer {outcomeAuthToken of the authorization request}
+x-correlation-id: {x-correlation-id of the authorization request}
+```
+
+The body is the same outcome returned by the `GET`. The call uses the `callback`
+settings in force when the authorization request was accepted. The same request
+sent again does not trigger a second callback.
+
+| `callback.delivery` | When the callback is sent |
+|---------------------|---------------------------|
+| `SEND`              | `callback.delayMs` after the authorization request. |
+| `NONE`              | Never: the session expires on the POS Gateway side. The outcome is still available through the `GET`. |
+| `LATE`              | Once, 1 s after the session has expired. |
+
+The session expires after the `authorizationTimeout` of the terminal plus a 10 s
+grace period, counted from the authorization request.
+
+Retries follow what the PSP is asked to do:
+
+| Answer | Behavior |
+|--------|----------|
+| `2xx` | Delivered, stop. |
+| `500`, `502`, `503`, `504`, no answer within 5 s, connection error | Retry after `retry.minDelayMs`. |
+| `429` | Retry after the `Retry-After` header, never less than `retry.minDelayMs`. |
+| `422` (session expired), any other status | Stop. |
+
+Retries also stop when `retry.maxAttempts` is reached or when the next attempt
+would fall after the session expiry.
+
+`GET /config/sessions` returns the stored sessions, each with the log of its
+callback attempts (time, status or error, and what was decided next). The same
+log is written to the container output (`docker compose logs psp-mock`).
+
+## Configuration API
+
+The behavior of the mock is driven by a configuration held in memory. It is
+lost, with the stored sessions, when the container restarts.
+
+| Endpoint         | Description                                             | Response                                                          |
+|------------------|---------------------------------------------------------|-------------------------------------------------------------------|
+| `GET /config`    | Returns the current configuration.                      | `200`                                                             |
+| `PATCH /config`  | Partial update: only the properties in the body change. | `200` with the new configuration, `400` with a `ProblemJson` body |
+| `DELETE /config` | Restores the defaults and deletes the stored sessions.  | `204`                                                             |
+| `GET /config/sessions` | Returns the stored sessions with their callback attempts. | `200` |
+
+Default configuration:
+
+```json
+{
+  "terminals": [
+    { "id": "POS-001", "description": "POS Sportello 01", "status": "AVAILABLE", "authorizationTimeout": 60 },
+    { "id": "POS-002", "description": "POS Sportello 02", "status": "MAINTENANCE", "authorizationTimeout": 30 }
+  ],
+  "operations": {
+    "terminals":      { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000 },
+    "authRequest":    { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000, "unavailableStatus": 422 },
+    "sessionOutcome": { "mode": "OK", "koStatus": 500, "delayMs": 0, "timeoutMs": 30000, "pendingStatus": 404 }
+  },
+  "callback": {
+    "baseUrl": "http://pagopa-posgw-transactions-handler:8080",
+    "apiKey": "psp-mock-api-key",
+    "outcome": "AUTHORIZED",
+    "delivery": "SEND",
+    "delayMs": 0,
+    "retry": { "minDelayMs": 2000, "maxAttempts": 50 }
+  }
+}
+```
+
+`terminals` is the list returned by `POST /pos/terminals`. It is replaced as a
+whole: at least one terminal, unique `id`, `status` in `AVAILABLE`,
+`UNAVAILABLE`, `MAINTENANCE`, optional `statusCode` in `S0001`, `S0002`,
+`S0003`, `authorizationTimeout` from 1 to 60 seconds.
+
+`operations` has one entry per mocked PSP operation: `terminals`
+(`POST /pos/terminals`), `authRequest` (`POST .../auth-requests`) and
+`sessionOutcome` (`GET .../auth-requests`).
+
+| Property            | Values                                                                                                                                     | Description                                                                    |
+|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| `mode`              | `OK`, `KO`, `TIMEOUT`                                                                                                                      | `KO` answers with `koStatus`, `TIMEOUT` answers `500` after `timeoutMs`.       |
+| `koStatus`          | `terminals`: 400, 401, 404, 500<br>`authRequest`: 400, 401, 404, 409, 422, 429, 500, 502, 503, 504<br>`sessionOutcome`: 400, 404, 429, 500 | Limited to the error statuses the spec declares for the operation.             |
+| `delayMs`           | 0 to 600000                                                                                                                                | Delay before the answer.                                                       |
+| `timeoutMs`         | 0 to 600000                                                                                                                                | How long the `TIMEOUT` mode waits.                                             |
+| `unavailableStatus` | 422, 500, 502, 503, 504                                                                                                                    | `authRequest` only: answer of the `POST` when the terminal is not `AVAILABLE`. |
+| `pendingStatus`     | 400, 404, 429, 500                                                                                                                         | `sessionOutcome` only: answer of the `GET` while the outcome is not available. |
+
+`callback` drives the outcome callback the mock sends after an accepted
+authorization request.
+
+| Property            | Values                                                             | Description                                                                                                        |
+|---------------------|--------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| `baseUrl`           | http(s) URL                                                        | Where the `PATCH /pos/sessions/{sessionId}/auth-requests` is sent.                                                 |
+| `apiKey`            | non-empty string                                                   | Value of the `Ocp-Apim-Subscription-Key` header.                                                                   |
+| `outcome`           | `AUTHORIZED`, `DECLINED`, `REFUSED`, `CANCELED_BY_USER`, `TIMEOUT` | Outcome reported by the PSP. `TIMEOUT` is a KO outcome that is still delivered.                                    |
+| `delivery`          | `SEND`, `NONE`, `LATE`                                             | `NONE` never calls back, `LATE` calls back after the session has expired.                                          |
+| `delayMs`           | 0 to 600000                                                        | Delay between the authorization request and the outcome.                                                           |
+| `retry.minDelayMs`  | 0 to 600000                                                        | Minimum wait between attempts. The default is the SANP minimum (2 s), lower values are accepted to speed up tests. |
+| `retry.maxAttempts` | 1 to 100                                                           | Upper bound on the attempts. With the default, session expiry stops the retries first.                             |
+
+Examples:
+
+```sh
+curl -s http://localhost:3001/config
+
+# terminal list answers 404, the callback is never sent
+curl -s -X PATCH http://localhost:3001/config \
+  -H 'Content-Type: application/json' \
+  -d '{"operations":{"terminals":{"mode":"KO","koStatus":404}},"callback":{"delivery":"NONE"}}'
+
+curl -i -X DELETE http://localhost:3001/config
+```
+
+An update is all or nothing: if any property is unknown or invalid, nothing
+changes and the `400` lists every error in `detail`:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Invalid configuration",
+  "status": 400,
+  "detail": "operations.terminals.koStatus: must be one of 400, 401, 404, 500; callback.foo: unknown property"
+}
+```
 
 ## Types generated from the PSP spec
 
 The request and response types come from
-[`psp_pos_layer.json`](https://github.com/pagopa/pagopa-api/blob/fd7ca1c931e136df2d568262fd9a63941c5d8226/openapi/psp_pos_layer.json)
+[`psp_pos_layer.json`](https://github.com/pagopa/pagopa-api/blob/6678950ad5c87ad7290fa087a25fe5f2d6276c9d/openapi/psp_pos_layer.json)
 in `pagopa-api`, generated with `openapi-typescript`. The spec is pinned to a
 commit through `config.pspSpecRef` in `package.json`: change that value to move
 to a newer version of the contract.
 
 `npm run generate` writes `src/generated/psp-pos-layer.ts`. The file is not
 committed: it is produced by `npm run build` (locally and in the image build).
+
+## Postman collection
+
+A Postman collection with its local environment is in
+[`api-tests/psp-mock`](../api-tests/psp-mock): import both files in Postman and
+select the environment. It has one request per configuration preset (an
+operation in KO or timeout, callback never sent or sent late, and so on), as an
+alternative to the curl commands above.
+
+The presets are partial updates, so they add up: use "Reset configuration" to go
+back to the defaults. The environment points to `http://localhost:3001`: change
+`HOSTNAME` if the mock runs on a different port.
+
+The "PSP operations" folder calls the mocked endpoints (terminal list,
+authorization request, session outcome), and "Get sessions" shows the stored
+sessions with their callback attempts. The session id comes from `SESSION_ID`
+in the environment: change it to start a new session, because the same
+authorization request sent again is a replay. A session keeps the callback
+settings in force when it was accepted, so send the presets before the
+authorization request.
 
 ## Run without Docker
 
@@ -92,6 +293,9 @@ psp-mock/
     index.ts            server bootstrap
     app.ts              Express app and routes
     config.ts           environment variables
+    callback/           outcome callback: scheduling and retry policy
+    handlers/           one router per group of endpoints
+    store/              in-memory state (mock configuration, sessions)
     types.ts            aliases over the generated types
     generated/          generated types (not committed)
 ```

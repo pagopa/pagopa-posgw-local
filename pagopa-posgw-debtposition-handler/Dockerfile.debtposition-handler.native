@@ -20,7 +20,7 @@ COPY --from=clone ${REPO}/ .
 
 #build the native executable
 RUN chmod +x ./gradlew
-RUN ./gradlew nativeCompile -x test
+RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN ./gradlew :nativeCompile -x test
 
 ### 3. Native run stage
 # version :stable-20240701-slim
