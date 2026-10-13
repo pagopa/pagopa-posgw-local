@@ -1,5 +1,7 @@
 import express, { type ErrorRequestHandler, type Express } from "express";
+import { authRequestsRouter } from "./handlers/authRequests.js";
 import { mockConfigRouter } from "./handlers/mockConfig.js";
+import { terminalsRouter } from "./handlers/terminals.js";
 import { problem } from "./types.js";
 
 // body-parser errors carry a 4xx status (malformed JSON, payload too large)
@@ -22,6 +24,8 @@ export const createApp = (): Express => {
   });
 
   app.use("/config", mockConfigRouter);
+  app.use("/pos/terminals", terminalsRouter);
+  app.use("/pos/sessions", authRequestsRouter);
 
   app.use((req, res) => {
     res.status(404).json(problem(404, "Not found", `No mock defined for ${req.method} ${req.path}`));

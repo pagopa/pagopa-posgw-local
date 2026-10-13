@@ -413,6 +413,32 @@
               }
             }
           }
+        },
+        {
+          "name": "Authorization request: unavailable terminal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-correlation-id",
+                "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              }
+            ],
+            "url": "{{HOSTNAME}}/pos/sessions/unavailable-terminal/auth-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1500,\n  \"psp\": {\n    \"id\": \"PSP_001\",\n    \"broker\": \"INT_123\",\n    \"channel\": \"CANALE_POS\"\n  },\n  \"creditorInstitution\": {\n    \"fiscalCode\": \"80001230456\"\n  },\n  \"terminalId\": \"POS-002\",\n  \"outcomeAuthToken\": \"token\",\n  \"sessionId\": \"unavailable-terminal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ]
     }
