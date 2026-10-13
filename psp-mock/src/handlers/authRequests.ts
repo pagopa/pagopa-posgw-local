@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { Router } from "express";
+import { scheduleCallback } from "../callback/scheduler.js";
 import { getMockConfig } from "../store/mockConfig.js";
 import { getSession, saveSession } from "../store/sessions.js";
 import { problem, type AuthorizationOutcomeDetails, type AuthorizationRequest } from "../types.js";
@@ -8,6 +9,9 @@ import { AUTHORIZATION_REQUEST, validate, withMode } from "./common.js";
 export const authRequestsRouter = Router();
 
 const PATH = "/:sessionId/auth-requests";
+
+// SANP: the session expires after the terminal authorizationTimeout plus a 10 s grace period
+const GRACE_MS = 10_000;
 
 // mock card data from the spec examples
 const CARD = {
@@ -56,8 +60,18 @@ authRequestsRouter.post(PATH, withMode("authRequest"), validate(AUTHORIZATION_RE
       .status(unavailableStatus)
       .json(problem(unavailableStatus, "Terminal not available", `Terminal ${terminal.id} is ${terminal.status}`));
   } else {
-    const outcomeAt = Date.now() + callback.delayMs;
-    saveSession(sessionId, { request, outcome: buildOutcome(request, outcomeAt), outcomeAt });
+    const now = Date.now();
+    const outcomeAt = now + callback.delayMs;
+    const session = {
+      request,
+      correlationId: req.get("x-correlation-id") ?? "",
+      outcome: buildOutcome(request, outcomeAt),
+      outcomeAt,
+      expiresAt: now + terminal.authorizationTimeout * 1000 + GRACE_MS,
+      attempts: [],
+    };
+    saveSession(sessionId, session);
+    scheduleCallback(sessionId, session, callback);
     res.status(204).end();
   }
 });
