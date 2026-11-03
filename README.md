@@ -25,6 +25,8 @@ In the _.env_ file there are configurations related to containers that can be cu
 
 \* The `POSGW_<service_name>_` prefix means these properties are present once per pagoPA POS gateway service
 
+In addition, the parameters of the individual microservices can also be customized by editing the env file contained in the folder of the specific service (e.g. `pagopa-posgw-transactions-handler/transactions-handler.env`).
+
 ### Run Pos Gateway pagoPA
 
 You can build and startup all services with the command
