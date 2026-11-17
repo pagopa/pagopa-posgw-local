@@ -300,6 +300,19 @@ services:
     networks:
       - pagopa-posgw-net
 
+  gpd-mock:
+    container_name: gpd-mock
+    build:
+      context: .
+      dockerfile: gpd-mock/Dockerfile.gpd-mock
+    ports:
+      - "${GPD_MOCK_PORT}:3000"
+    volumes:
+      - ./gpd-mock/gpd-mock.json:/config/gpd-server.json
+      - ./gpd-mock/middleware.js:/config/middleware.js:ro
+    networks:
+      - pagopa-posgw-net
+
   psp-mock:
     container_name: psp-mock
     build:

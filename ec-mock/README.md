@@ -58,6 +58,25 @@ Compose automatically connects the mock to `pagopa-posgw-net`. Configure the
 calling service's EC base URL as `http://ec-mock:3000`.
 From your host, use `http://localhost:3000` (or your chosen `EC_MOCK_PORT`).
 
+## Through Traefik
+
+The mock is also reachable via Traefik at
+`http://localhost:8000/ec-mock/...` (the `/ec-mock` prefix is stripped).
+Traefik sets the `X-Mock-Response` request header, overriding the one sent by
+the client. Its value is defined in `traefik_conf/conf.yaml`, in the
+`ec-mock-headers` middleware. 
+
+Traefik sets `X-Mock-Response: success` in `traefik_conf/conf.yaml`; change it with the following command (f.e. to set timeout response)
+
+```bash
+yq -i '.http.middlewares."ec-mock-headers".headers.customRequestHeaders."X-Mock-Response" = "timeout"' traefik_conf/conf.yaml
+```
+
+using https://github.com/mikefarah/yq 
+
+Traefik reloads the file automatically. See [Available responses](#available-responses)
+for the accepted values.
+
 ## Send requests
 
 Each example below is a collapsible section. Run the `curl` command from a
@@ -208,18 +227,18 @@ curl -i -X GET \
 
 Header values are case-sensitive.
 
-| `X-Mock-Response` | HTTP status | JSON `code` | JSON `message` |
-| --- | --- | --- | --- |
-| Omitted or `success` | 204 | No body | No body |
-| `bad-request` | 400 | `BAD_REQUEST` | `Bad Request` |
-| `not-found` | 404 | `NOT_FOUND` | `Not Found` |
-| `too-many-requests` | 429 | `TOO_MANY_REQUESTS` | `Too Many Requests` |
-| `server-error` | 500 | `INTERNAL_SERVER_ERROR` | `Internal server error` |
-| `bad-gateway` | 502 | `BAD_GATEWAY` | `Bad Gateway` |
-| `service-unavailable` | 503 | `SERVICE_UNAVAILABLE` | `Service unavailable` |
-| `gateway-timeout` | 504 | `GATEWAY_TIMEOUT` | `Gateway timeout` |
-| `timeout` | 500 after 30 seconds | `INTERNAL_SERVER_ERROR` | `Internal server error` |
-| Any other value (including an empty value) | 400 | `INVALID_MOCK_RESPONSE` | `Bad request` |
+| `X-Mock-Response`                          | HTTP status          | JSON `code`             | JSON `message`          |
+|--------------------------------------------|----------------------|-------------------------|-------------------------|
+| Omitted or `success`                       | 204                  | No body                 | No body                 |
+| `bad-request`                              | 400                  | `BAD_REQUEST`           | `Bad Request`           |
+| `not-found`                                | 404                  | `NOT_FOUND`             | `Not Found`             |
+| `too-many-requests`                        | 429                  | `TOO_MANY_REQUESTS`     | `Too Many Requests`     |
+| `server-error`                             | 500                  | `INTERNAL_SERVER_ERROR` | `Internal server error` |
+| `bad-gateway`                              | 502                  | `BAD_GATEWAY`           | `Bad Gateway`           |
+| `service-unavailable`                      | 503                  | `SERVICE_UNAVAILABLE`   | `Service unavailable`   |
+| `gateway-timeout`                          | 504                  | `GATEWAY_TIMEOUT`       | `Gateway timeout`       |
+| `timeout`                                  | 500 after 30 seconds | `INTERNAL_SERVER_ERROR` | `Internal server error` |
+| Any other value (including an empty value) | 400                  | `INVALID_MOCK_RESPONSE` | `Bad request`           |
 
 `gateway-timeout` returns immediately; only `timeout` waits 30 seconds before
 returning its 500 response. `too-many-requests` simulates a response and does not

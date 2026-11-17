@@ -107,7 +107,7 @@ module.exports = (req, res, next) => {
         message: 'Gateway timeout',
       });
 
-    case 'timeout':
+    case 'timeout': {
       const sleep = (delay) => new Promise(resolve => setTimeout(resolve, delay));
       const timeoutFunc = async () => {
         await sleep(timeoutDelay);
@@ -118,8 +118,9 @@ module.exports = (req, res, next) => {
                   code: 'INTERNAL_SERVER_ERROR',
                   message: 'Internal server error',
               });
-      });
+      }).catch(next);
       break;
+    }
 
     default:
       logRequest(req, sessionId, 400, `Unhandled X-Mock-Response: ${response}`);
