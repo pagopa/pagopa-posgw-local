@@ -71,7 +71,7 @@ const buildPosition = (iupd, status) => ({
           amount: 10000,
           description: 'Mock installment',
           dueDate: '2099-12-31T23:59:59',
-          status,
+          status: 'UNPAID',
           transfer: [
             {
               idTransfer: '1',

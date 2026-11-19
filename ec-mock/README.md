@@ -225,7 +225,7 @@ curl -i -X GET \
 
 ### Available responses
 
-Header values are case-sensitive.
+Header values are case-insensitive.
 
 | `X-Mock-Response`                          | HTTP status          | JSON `code`             | JSON `message`          |
 |--------------------------------------------|----------------------|-------------------------|-------------------------|

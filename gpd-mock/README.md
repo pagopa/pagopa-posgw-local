@@ -17,7 +17,7 @@ Other methods on these paths return `405` with an `Allow` header.
 
 ## Selecting the response
 
-The response is selected by the `X-Mock-Response` header (case-sensitive).
+The response is selected by the `X-Mock-Response` header (case-insensitive).
 When omitted or `success`, the success response is returned.
 
 | `X-Mock-Response`     | Status               | POST | PATCH |

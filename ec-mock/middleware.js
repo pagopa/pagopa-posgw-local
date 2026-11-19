@@ -50,7 +50,7 @@ module.exports = (req, res, next) => {
   const sessionId = matchesEndpoint[1];
 
   // Get the value of the X-Mock-Response header from the request
-  const response = req.get('X-Mock-Response');
+  const response = req.get('X-Mock-Response')?.toLowerCase() ?? 'success';
 
   switch (response) {
     case undefined:
