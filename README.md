@@ -65,6 +65,29 @@ External systems are replaced by mocks, each documented in its own folder:
 |------------|----------------------------------------------|--------------------------------------------------|------------------------------------------|
 | `ec-mock`  | Mock of the EC authorization-request API     | http://localhost:${EC_MOCK_PORT} (default 3000)  | [ec-mock/README.md](ec-mock/README.md)   |
 | `psp-mock` | Mock of the PSP ("tesoriere") POS layer APIs | http://localhost:${PSP_MOCK_PORT} (default 3001) | [psp-mock/README.md](psp-mock/README.md) |
+| `gpd-mock` | Mock of the Debt Position POS v3 API         | http://localhost:${GPD_MOCK_PORT} (default 3002) | [gpd-mock/README.md](gpd-mock/README.md) |
+
+##### Mocks through Traefik
+
+The mocks are also exposed by Traefik at `http://localhost:8000/<mock-name>/...`
+(`/ec-mock`, `/psp-mock`, `/gpd-mock`); the prefix is stripped before
+forwarding.
+
+For `ec-mock` and `gpd-mock`, Traefik sets the `X-Mock-Response`
+request header (overriding the client's), so the mocked response is chosen in
+`traefik_conf/conf.yaml`. Change it with `yq`; Traefik reloads the file automatically:
+
+```sh
+# ec-mock
+yq -i '.http.middlewares."ec-mock-headers".headers.customRequestHeaders."X-Mock-Response" = "timeout"' traefik_conf/conf.yaml
+
+# gpd-mock
+yq -i '.http.middlewares."gpd-mock-headers".headers.customRequestHeaders."X-Mock-Response" = "timeout"' traefik_conf/conf.yaml
+```
+using https://github.com/mikefarah/yq
+
+The accepted values are listed in the mock's own README. `psp-mock` does not use
+this header: see [psp-mock/README.md](psp-mock/README.md) for how to configure it.
 
 
 
