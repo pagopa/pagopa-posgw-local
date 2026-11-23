@@ -5,15 +5,75 @@ http:
       rule: "PathPrefix(`/transactions-handler`)"
       middlewares:
         - transactions-handler-prefix
-
+    debtposition-handler-router:
+      service: "pagopa-posgw-debtposition-handler"
+      rule: "PathPrefix(`/debtposition-handler`)"
+      middlewares:
+        - debtposition-handler-prefix
+    ec-mock-router:
+      service: "ec-mock"
+      rule: "PathPrefix(`/ec-mock`)"
+      middlewares:
+        - ec-mock-prefix
+        - ec-mock-headers
+    psp-mock-router:
+      service: "psp-mock"
+      rule: "PathPrefix(`/psp-mock`)"
+      middlewares:
+        - psp-mock-prefix
+    gpd-mock-router:
+      service: "gpd-mock"
+      rule: "PathPrefix(`/gpd-mock`)"
+      middlewares:
+        - gpd-mock-prefix
+        - gpd-mock-headers
   middlewares:
+    gpd-mock-prefix:
+      stripPrefix:
+        prefixes:
+          - "/gpd-mock"
+    gpd-mock-headers:
+      headers:
+        customRequestHeaders:
+          X-Mock-Response: "success"
+    psp-mock-prefix:
+      stripPrefix:
+        prefixes:
+          - "/psp-mock"
+    ec-mock-prefix:
+      stripPrefix:
+        prefixes:
+          - "/ec-mock"
+    ec-mock-headers:
+      headers:
+        customRequestHeaders:
+          X-Mock-Response: "success"
     transactions-handler-prefix:
       stripPrefix:
         prefixes:
           - "/transactions-handler"
-
+    debtposition-handler-prefix:
+      stripPrefix:
+        prefixes:
+          - "/debtposition-handler"
   services:
     pagopa-posgw-transactions-handler:
       loadBalancer:
         servers:
           - url: "http://pagopa-posgw-transactions-handler:8080"
+    pagopa-posgw-debtposition-handler:
+      loadBalancer:
+        servers:
+          - url: "http://pagopa-posgw-debtposition-handler:8080"
+    ec-mock:
+      loadBalancer:
+        servers:
+          - url: "http://ec-mock:3000"
+    psp-mock:
+      loadBalancer:
+        servers:
+          - url: "http://psp-mock:3000"
+    gpd-mock:
+      loadBalancer:
+        servers:
+          - url: "http://gpd-mock:3000"

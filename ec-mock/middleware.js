@@ -50,7 +50,7 @@ module.exports = (req, res, next) => {
   const sessionId = matchesEndpoint[1];
 
   // Get the value of the X-Mock-Response header from the request
-  const response = req.get('X-Mock-Response');
+  const response = req.get('X-Mock-Response')?.toLowerCase() ?? 'success';
 
   switch (response) {
     case undefined:
@@ -107,7 +107,7 @@ module.exports = (req, res, next) => {
         message: 'Gateway timeout',
       });
 
-    case 'timeout':
+    case 'timeout': {
       const sleep = (delay) => new Promise(resolve => setTimeout(resolve, delay));
       const timeoutFunc = async () => {
         await sleep(timeoutDelay);
@@ -118,8 +118,9 @@ module.exports = (req, res, next) => {
                   code: 'INTERNAL_SERVER_ERROR',
                   message: 'Internal server error',
               });
-      });
+      }).catch(next);
       break;
+    }
 
     default:
       logRequest(req, sessionId, 400, `Unhandled X-Mock-Response: ${response}`);
