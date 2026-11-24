@@ -178,11 +178,6 @@
     "type": "apikey",
     "apikey": [
       {
-        "key": "key",
-        "value": "Ocp-Apim-Subscription-Key",
-        "type": "string"
-      },
-      {
         "key": "value",
         "value": "{{apiKey}}",
         "type": "string"
