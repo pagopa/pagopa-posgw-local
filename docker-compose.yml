@@ -286,6 +286,12 @@ services:
         condition: service_completed_successfully
       signoz-otel-collector:
         condition: service_started
+      gpd-mock:
+        condition: service_started
+      traefik:
+        condition: service_started
+      redis:
+        condition: service_started
 
   ec-mock:
     container_name: ec-mock
